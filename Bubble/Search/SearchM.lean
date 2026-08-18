@@ -35,9 +35,6 @@ def run (config : SearchConfig) (ruleIndex : Index RuleInfo)
     Lean.Elab.Tactic.TacticM (α × State Q × SearchStore) := do
   let store ← mkInitialStore goal
   let initialGoals := (← store.root.get).goals
-  let some initialGoal := initialGoals[0]? | throwError "missing initial goal"
-  let dependencyCount := (← initialGoal.get).unassignedMvars.size
-  trace[ibubble.search] "initial root dependency count {dependencyCount}"
   let state : State Q := { queue := ← Queue.ofArray initialGoals }
   let ((result, state), store) ←
     TreeM.run {} store <| (ReaderT.run action { config, ruleIndex }).run state

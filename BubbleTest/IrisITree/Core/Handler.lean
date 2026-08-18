@@ -200,6 +200,7 @@ instance {E GE : Effect.{u} } {R σ : Type _}
     iintro Hh Hinv
     ihave >⟨%a, %s', %_, _, _⟩ := A.adequate $$ Hh [$]; assumption
     iexists (k a), _, (λ P => P (k a)), Ms, [λ P => P (k a)]
+    imodintro
     ibubble simp pureBy simp [*]
     -- imodintro
     -- isplitr; itrivial
