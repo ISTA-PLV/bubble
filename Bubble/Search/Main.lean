@@ -42,11 +42,12 @@ private def runRule (goalRef : GoalRef) (matchResult : RuleMatch) :
     "goal {(← goalRef.get).id} trying rule {matchResult.rule.id}"
   let some input ← mkRuleInput config goalRef matchResult
     | return .failed
-  trace[ibubble.search] "constructed rule input for goal {(← goalRef.get).id}"
   input.state.restore
   let output ← input.goal.withContext <|
     matchResult.rule.info.builder.run input
-  trace[ibubble.search] "ran rule {matchResult.rule.id} on goal {(← goalRef.get).id}"
+  if output.rappSpecs.isEmpty then
+    trace[ibubble.search] "rule {matchResult.rule.id} did not apply to goal {(← goalRef.get).id}"
+  else trace[ibubble.search] "rule {matchResult.rule.id} produced {output.rappSpecs.size} application candidate(s) for goal {(← goalRef.get).id}"
   let result ← commitRuleOutput goalRef matchResult.rule output
   match result with
   | .applied closedRapps =>
@@ -72,7 +73,7 @@ where
 /-- Find the next active goal and perform one expansion step. -/
 private def expandNextGoal : SearchM Q Bool := do
   let some goalRef ← nextActiveGoal? | return false
-  trace[ibubble.search] "expanding goal {(← goalRef.get).id}"
+  trace[ibubble.search] "selected goal {(← goalRef.get).id} for expansion"
   /- Normalization is always performed first. -/
   unless (← goalRef.get).normalizationState.isNormal do
     let config ← SearchM.getConfig

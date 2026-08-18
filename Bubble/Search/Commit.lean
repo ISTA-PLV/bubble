@@ -34,6 +34,7 @@ private def commitSpec (parentRef : GoalRef) (usedRule : Rule RuleInfo)
     (spec : RappSpec) : SearchM Q (RappRef × Array GoalRef) := do
   let parent ← parentRef.get
   let goalProbability := parent.successProbability * usedRule.info.successProbability
+  let kind ← platformKind spec
   /- Construct a platform containing its groups and child goals. -/
   let platformRef ← IO.mkRef <| Plat.mk {
     id := ← TreeM.getAndIncrementNextPlatId
@@ -41,7 +42,7 @@ private def commitSpec (parentRef : GoalRef) (usedRule : Rule RuleInfo)
     goals := #[]
     groups := #[]
     join := { roots := #[] }
-    kind := ← platformKind spec
+    kind
     bubbleToGroup := {}
   }
 
@@ -72,6 +73,12 @@ private def commitSpec (parentRef : GoalRef) (usedRule : Rule RuleInfo)
     TreeM.addGoal goalRef
     goalRefs := goalRefs.push goalRef
     goalDependencies := goalDependencies.push (id, child.dependencies)
+    let rendered ← spec.postState.runMetaM' <| ppGoal child.goal
+    trace[ibubble.search] m!"created goal node {id} from rule {usedRule.id}" ++
+      m!"\n  depth {parent.depth + 1} | slot {slot}" ++
+      m!" | platform {(← platformRef.get).id} ({kind})" ++
+      m!" | dependencies {child.dependencies.size}" ++
+      m!"\n{rendered}"
 
   /- Construct the group based on child goal's metavariables info -/
   let mut groups : Array Group := #[]
@@ -91,9 +98,6 @@ private def commitSpec (parentRef : GoalRef) (usedRule : Rule RuleInfo)
     spec.postState.restore
     parent.unassignedMvars.foldM (init := {}) λ assigned mvar => do
       return if ← mvar.isAssigned then assigned.insert mvar else assigned
-
-  trace[ibubble.search]
-    "commit {usedRule.id}: parent mvars {parent.unassignedMvars.toArray}, child mvars {goalDependencies.map (·.2.toArray)}, introduced {introducedMVars.toArray}, assigned {assignedMVars.toArray}"
 
   /- Construct the new Rapp node. -/
   let rappRef ← IO.mkRef <| Rapp.mk {
