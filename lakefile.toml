@@ -1,0 +1,21 @@
+name = "bubble"
+version = "0.1.0"
+license = "Apache-2.0"
+defaultTargets = ["Bubble", "BubbleTest"]
+
+[[require]]
+name = "iris"
+git = "https://github.com/leanprover-community/iris-lean.git"
+rev = "master"
+subDir = "Iris"
+
+[[require]]
+name = "Coinductive"
+scope = "ISTA-PLV"
+rev = "d1aeffe87ec7bd4bd13ed92fdc00ef6c5d58f800"
+
+[[lean_lib]]
+name = "Bubble"
+
+[[lean_lib]]
+name = "BubbleTest"

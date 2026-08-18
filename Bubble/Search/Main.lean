@@ -1,0 +1,129 @@
+module
+
+public meta import Lean.Util.Profile
+public meta import Bubble.Replay.Main
+public meta import Bubble.Rule.Index
+public meta import Bubble.Rule.Tactic.Main
+public meta import Bubble.Rule.Selection
+public meta import Bubble.Search.Commit
+public meta import Bubble.Search.Propagation
+
+public meta section
+
+namespace Bubble.Search
+
+open Lean Meta Std Elab Tactic
+
+initialize registerTraceClass `ibubble.search
+
+variable {Q : Type} [Queue Q]
+
+/-- Check whether a goal can still be expanded by the search. -/
+private def isGoalActive (goal : Goal) : Bool :=
+  !goal.isForcedUnprovable &&
+  !goal.normalizationState.isProvenByNorm &&
+  match goal.rulesQueue? with
+  | none => true
+  | some queue => !queue.isEmpty
+
+/-- Pop goals until an active goal is found or the search queue is empty. -/
+private partial def nextActiveGoal? : SearchM Q (Option GoalRef) := do
+  let some goalRef ← SearchM.popGoal? | return none
+  let goal ← goalRef.get
+  if isGoalActive goal then
+    return some goalRef
+  nextActiveGoal?
+
+/-- Run one matched rule, commit its outputs, and emit bubbles for closed Rapps. -/
+private def runRule (goalRef : GoalRef) (matchResult : RuleMatch) :
+    SearchM Q RuleCommitResult := do
+  let config ← SearchM.getConfig
+  trace[ibubble.search]
+    "goal {(← goalRef.get).id} trying rule {matchResult.rule.id}"
+  let some input ← mkRuleInput config goalRef matchResult
+    | return .failed
+  trace[ibubble.search] "constructed rule input for goal {(← goalRef.get).id}"
+  input.state.restore
+  let output ← input.goal.withContext <|
+    matchResult.rule.info.builder.run input
+  trace[ibubble.search] "ran rule {matchResult.rule.id} on goal {(← goalRef.get).id}"
+  let result ← commitRuleOutput goalRef matchResult.rule output
+  match result with
+  | .applied closedRapps =>
+      /- Emit bubbles for closed Rapps upward. -/
+      closedRapps.forM emitRappBubble
+  | .failed => pure ()
+  return result
+
+/-- Skip failed candidates and apply the next rule that produces an expansion. -/
+private partial def runNextApplicableRule (goalRef : GoalRef) :
+    SearchM Q Unit := do
+  let candidates ← Rule.select goalRef
+  let remaining ← pickLoop candidates
+  goalRef.modify λ goal => goal.setRulesQueue? (some remaining)
+where
+  /-- Traverse the candidate queue until one rule applies or the queue is exhausted. -/
+  pickLoop (queue : RuleQueue) : SearchM Q RuleQueue := do
+    let some (matchResult, remaining) := queue.pop? | return queue
+    match ← runRule goalRef matchResult with
+    | .failed => pickLoop remaining
+    | .applied _ => return remaining
+
+/-- Find the next active goal and perform one expansion step. -/
+private def expandNextGoal : SearchM Q Bool := do
+  let some goalRef ← nextActiveGoal? | return false
+  trace[ibubble.search] "expanding goal {(← goalRef.get).id}"
+  /- Normalization is always performed first. -/
+  unless (← goalRef.get).normalizationState.isNormal do
+    let config ← SearchM.getConfig
+    let _ ← normalizeGoal config goalRef
+
+  /- Read the goal again because normalization may have changed its state. -/
+  let goal ← goalRef.get
+  if goal.normalizationState.isProvenByNorm then
+    emitNormalizationBubble goalRef
+  else
+    runNextApplicableRule goalRef
+
+  /- If some remaining rules, add into goal queue. -/
+  let iteration ← SearchM.getIteration
+  goalRef.modify λ goal => goal.setLastExpandedInIteration iteration
+  let goal ← goalRef.get
+  if isGoalActive goal then SearchM.enqueueGoals #[goalRef]
+  return true
+
+/-- Run the search until a root bubble is found or no active goals remain. -/
+private partial def searchLoop : SearchM Q (Array MVarId) := do
+  checkSystem "ibubble"
+  if let some rootBubble ← TreeM.getResult? then
+    let config ← SearchM.getConfig
+    return ← Replay.replayProof config rootBubble
+  if ← expandNextGoal then
+    SearchM.incrementIteration
+    searchLoop
+  else
+    /- [TODO]: Instead of discarding all speculative steps and returning to the
+      normalized root state, is there anything else we can do? -/
+    let root ← (← TreeM.getRootGoal).get
+    let (rootState, remaining) ← match root.normalizationState with
+      | .notNormal => pure (root.preNormState, #[root.preNormGoal])
+      | .normal postGoal postState .. => pure (postState, #[postGoal])
+      | .provenByNorm .. => throwError
+        "ibubble: search invariant violated: normalization closed the root goal, but no root bubble was emitted"
+    rootState.restore
+    return remaining
+
+/-- Main entry for the search stage. -/
+meta def search (goal : MVarId) (config : SearchConfig := {}) : TacticM (Array MVarId) := do
+  goal.checkNotAssigned `ibubble
+  let config := {
+    config with maxNormIterations := max config.maxNormIterations config.maxDepth
+  }
+  let ruleIndex ← Rule.buildIndex config
+  /- Pickup the specified strategy according to the configuration. -/
+  Queue.withStrategy config.strategy λ Q => do
+    let (remaining, _, _) ←
+      SearchM.run (Q := Q) config ruleIndex goal searchLoop
+    return remaining
+
+end Bubble.Search

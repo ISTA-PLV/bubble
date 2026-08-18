@@ -1,0 +1,158 @@
+module
+
+public meta import Iris.ProofMode
+public meta import Bubble.Replay.Normalization
+
+public meta section
+
+namespace Bubble.Replay
+
+open Lean Lean.Elab.Tactic Lean.Meta
+open Iris.ProofMode
+open ReplayM
+
+private def appliedHypIdent? : AppliedHyp → Option (TSyntax `ident)
+  | .spatial hyp | .intuitionistic hyp => some (mkIdent hyp.name)
+  | .lean userName _ => some (mkIdent userName)
+
+private def frameIdent (hyp : IrisHyp) : MetaM (TSyntax `frameIdent) := do
+  let name := mkIdent hyp.name
+  `(frameIdent| $name:ident)
+
+private def mkSpatialSpecPat (hyps : Array IrisHyp) :
+    MetaM (TSyntax `specPat) := do
+  let names ← hyps.mapM frameIdent
+  `(specPat| [$[$names:frameIdent]*])
+
+private def mkIApply (fn : TSyntax `term)
+    (splits : Array (Array IrisHyp)) : MetaM (TSyntax `tactic) := do
+  if splits.isEmpty then
+    `(tactic| iapply $fn:term)
+  else
+    let patterns ← splits.mapM mkSpatialSpecPat
+    `(tactic| iapply $fn:term $$ $patterns:specPat*)
+
+/-- Reconstruct the Iris tactic corresponding to a recorded rule application. -/
+private def mkRuleApplicationTactic (rapp : Rapp)
+    (splits : Array (Array IrisHyp)) (childCount : Nat)
+    (config : SearchConfig) : MetaM (TSyntax `tactic) := do
+  let fallback ← `(tactic| skip)
+  match rapp.appliedRule.info.builder with
+  | .backward => mkIApply (mkIdent rapp.appliedRule.id.name.eraseMacroScopes) splits
+  | .forward => pure fallback
+  | .tactic .ipureIntro =>
+      if config.pureStop? then `(tactic| ipureintro)
+      else
+        let solver : TSyntax `tactic := ⟨config.pureSolver⟩
+        `(tactic| (ipureintro; $solver:tactic))
+  | .tactic .iexist => `(tactic| iexists _)
+  | .tactic .icases =>
+      match rapp.usedHyp? >>= appliedHypIdent?,
+          rapp.generatedSpatialHyps[0]?, rapp.generatedSpatialHyps[1]? with
+      | some used, some left, some right =>
+          let left := mkIdent left.name.eraseMacroScopes
+          let right := mkIdent right.name.eraseMacroScopes
+          `(tactic| icases $used:term with ($left:ident | $right:ident))
+      | _, _, _ => pure fallback
+  | .tactic .icasesFalse =>
+      match rapp.usedHyp? >>= appliedHypIdent? with
+      | some used => `(tactic| icases $used:term with ⟨⟩)
+      | none => pure fallback
+  | .tactic .isplit => `(tactic| isplit)
+  | .tactic .ileft => `(tactic| ileft)
+  | .tactic .iright => `(tactic| iright)
+  | .tactic .imodIntro => `(tactic| imodintro)
+  | .tactic .imod =>
+      match rapp.usedHyp? >>= appliedHypIdent?, rapp.generatedSpatialHyps[0]? with
+      | some used, some generated =>
+          let generated := mkIdent generated.name.eraseMacroScopes
+          `(tactic| imod $used:term with $generated:ident)
+      | some used, none => `(tactic| imod $used:term)
+      | none, _ => pure fallback
+  | .tactic .identity =>
+      match splits[0]? with
+      | some left =>
+          let names := left.map fun hyp => mkIdent hyp.name
+          `(tactic| isplitl [$names*])
+      | none => pure fallback
+  | .tactic .applyHyps =>
+      match rapp.usedHyp? >>= appliedHypIdent? with
+      | some used =>
+          if childCount == 0 then `(tactic| iexact $used:ident)
+          else mkIApply used splits
+      | none => pure fallback
+  | .tactic .haveHyps =>
+      match rapp.usedHyp? >>= appliedHypIdent?, rapp.generatedSpatialHyps[0]? with
+      | some used, some generated =>
+          let generated := mkIdent generated.name.eraseMacroScopes
+          let premiseSplits := splits.extract 0 (splits.size - 1)
+          if premiseSplits.isEmpty then pure fallback
+          else
+            let patterns ← premiseSplits.mapM mkSpatialSpecPat
+            `(tactic| ihave $generated:ident := $used:term $$ $patterns:specPat*)
+      | _, _ => pure fallback
+
+/-- Separate replay-generated Iris goals from ordinary Lean goals. -/
+private def classifyGoals (goals : Array MVarId) :
+    ReplayM (Array MVarId × Array MVarId) := do
+  goals.foldlM (init := (#[], #[])) fun (iris, lean) goal => do
+    if ← goal.isAssignedOrDelayedAssigned then return (iris, lean)
+    let irisGoal? ← goal.withContext do
+      let type ← instantiateMVars (← goal.getType)
+      return parseIrisGoal? type
+    if irisGoal?.isSome then return (iris.push goal, lean)
+    return (iris, lean.push goal)
+
+/-- Discharge replay-generated pure Lean goals with the configured solver. -/
+private def solvePureGoals (goals : Array MVarId) : ReplayM (Array MVarId) := do
+  let config ← ReplayM.getConfig
+  let mut remaining := #[]
+  for goal in goals do
+    if ← goal.isAssignedOrDelayedAssigned then continue
+    let isPure ← goal.withContext do
+      isProp (← instantiateMVars (← goal.getType))
+    if !isPure || config.pureStop? then
+      remaining := remaining.push goal
+      continue
+    let preState ← liftM (m := MetaM) saveState
+    let generated ← withSuppressedMessages <|
+      evalTacticAt config.pureSolver goal
+    let generated ← ReplayM.openGoals generated.toArray
+    unless generated.isEmpty do
+      throwError "ibubble: pure solver left {generated.size} unresolved replay goal(s)"
+    let postState ← liftM (m := MetaM) saveState
+    ReplayM.appendScript #[{
+      preState, preGoal := goal, tactic := ⟨config.pureSolver⟩,
+      postState, postGoals := generated
+    }]
+  return remaining
+
+/-- Replay one recorded rule application and return its Iris children and unrelated goals. -/
+def replayRuleApplication (focus : MVarId) (goal : Goal) (rappRef : RappRef)
+    (children : Array BubbleId) (expectedChildren : Nat := children.size) :
+    ReplayM (Array MVarId × Array MVarId) := do
+  let (normalizedFocus, normRemaining) ← normalizeForRuleApplication focus goal
+  let rapp ← rappRef.get
+  let plat ← rapp.children.get
+  let splits ← if plat.kind.isLinear && children.size > 1
+    then children.mapM λ id => return (← ReplayM.getBubble id).consumed
+    else pure #[]
+  let config ← ReplayM.getConfig
+  let tactic ← mkRuleApplicationTactic rapp splits expectedChildren config
+  trace[ibubble.replay]
+    "Rapp {rapp.id}, rule {rapp.appliedRule.id}: {tactic}"
+  let preState ← liftM (m := MetaM) saveState
+  let generated ← withSuppressedMessages <|
+    evalTacticAt tactic normalizedFocus
+  let generated ← ReplayM.openGoals generated.toArray
+  let postState ← liftM (m := MetaM) saveState
+  ReplayM.appendScript #[{
+    preState, preGoal := normalizedFocus, tactic, postState, postGoals := generated
+  }]
+  let (irisGoals, leanGoals) ← classifyGoals generated
+  let leanGoals ← solvePureGoals leanGoals
+  if irisGoals.size != expectedChildren then
+    throwError "ibubble: replay of Rapp {rapp.id} produced {irisGoals.size} Iris goals, expected {expectedChildren}"
+  return (irisGoals, normRemaining ++ leanGoals)
+
+end Bubble.Replay
