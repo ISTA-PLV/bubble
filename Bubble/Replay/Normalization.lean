@@ -39,6 +39,9 @@ def normalize (focus : MVarId) (goal : Goal) :
 /-- Normalize a goal before replaying its selected rule application. -/
 def normalizeForRuleApplication (focus : MVarId) (goal : Goal) :
     ReplayM (MVarId × Array MVarId) := do
+  if let .normal postGoal _ _ _ := goal.normalizationState then
+    if postGoal == goal.preNormGoal then
+      return (focus, #[])
   let (result, remaining) ← normalize focus goal
   let normalizedFocus ← match result with
     | .proved => throwError
