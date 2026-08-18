@@ -3,6 +3,7 @@ module
 public meta import Lean.Elab.Tactic
 public meta import Lean.Meta.Tactic.TryThis
 public import Batteries.Tactic.PermuteGoals
+public meta import Batteries.Lean.Meta.SavedState
 
 public meta section
 
@@ -32,20 +33,22 @@ structure TacticState where
 
 namespace TacticState
 
+private def retainOpen (s : TacticState) (state : Meta.SavedState) : MetaM TacticState :=
+  state.runMetaM' do
+    return { goals := ← s.goals.filterM λ goal =>
+      not <$> goal.isAssignedOrDelayedAssigned }
+
 def getVisibleGoalIndex (s : TacticState) (goal : MVarId) : MetaM Nat := do
   let some idx := s.goals.idxOf? goal
     | throwError "ibubble?: script rendering could not find goal {goal.name}"
   return idx
 
 def pickGoal (s : TacticState) (idx : Nat) : TacticState :=
-  if idx == 0 then
-    s
-  else
-    match s.goals[idx]? with
+  if idx == 0 then s
+  else match s.goals[idx]? with
     | some goal =>
-        { goals :=
-            #[goal] ++ s.goals.extract 0 idx ++
-              s.goals.extract (idx + 1) s.goals.size }
+      { goals := #[goal] ++ s.goals.extract 0 idx ++
+          s.goals.extract (idx + 1) s.goals.size }
     | none => s
 
 def applyStepAtHead (s : TacticState) (step : ScriptStep) : TacticState :=
@@ -62,6 +65,8 @@ namespace ScriptStep
 def render (acc : Array (TSyntax `tactic)) (step : ScriptStep)
     (tacticState : TacticState) :
     MetaM (Array (TSyntax `tactic) × TacticState) := do
+  /- Metavariable goals can be solved indirectly while replaying a sibling. -/
+  let tacticState ← tacticState.retainOpen step.preState
   let pos ← tacticState.getVisibleGoalIndex step.preGoal
   let tacticState ← tacticState.applyStep step
   let acc ←
