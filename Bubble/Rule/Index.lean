@@ -9,6 +9,7 @@ public meta section
 namespace Bubble.Rule
 
 open Lean Meta
+open Iris.BI
 
 private def builtinRule (name : Name) (kind : RuleBuilderKind)
     (descr : TacticDescr) (probability : Percent) : Rule RuleInfo where
@@ -68,28 +69,42 @@ def commonIndex : Index RuleInfo :=
     |>.add isplitRule isplitRule.indexingMode
 
 private def theoremRule (scope : RuleScope) (kind : RuleBuilderKind)
-    (decl : Name) (probability : Percent) : Rule RuleInfo where
-  id := { name := decl, kind, phase := .expand, scope }
-  indexingMode := .unindexed
+    (decl : Name) (probability : Percent)
+    (form : BackwardRuleForm := .direct) (variant : Nat := 0)
+    (indexingMode : IndexingMode := .unindexed) : Rule RuleInfo where
+  id := { name := decl, kind, phase := .expand, scope, variant }
+  indexingMode
   info := .ofBuilder
     (match kind with
-      | .backward => .backward
+      | .backward => .backward form
       | .forward => .forward
       | _ => .forward)
     probability
 
-private def overridden (localRules : Array LocalTheoremRule)
-    (kind : RuleBuilderKind) (decl : Name) : Bool :=
-  localRules.any fun rule => rule.kind == kind && rule.decl == decl
+/-- Lower a registered bi-entailment into two explicitly oriented backward rules. -/
+private def backwardTheoremRules (scope : RuleScope) (decl : Name)
+    (probability : Percent) : MetaM (Array (Rule RuleInfo)) := do
+  let info ← getConstInfo decl
+  let (_, _, body) ← forallMetaTelescopeReducing info.type
+  let body ← whnf body
+  let some args := body.appM? ``BIBase.BiEntails
+    | return #[theoremRule scope .backward decl probability]
+  let some lhs := args[args.size - 2]? | return #[]
+  let some rhs := args[args.size - 1]? | return #[]
+  let mpMode ← IndexingMode.targetMatching rhs
+  let mprMode ← IndexingMode.targetMatching lhs
+  return #[
+    theoremRule scope .backward decl probability .mp 1 mpMode,
+    theoremRule scope .backward decl probability .mpr 2 mprMode
+  ]
 
 def backwardIndex (localRules : Array LocalTheoremRule := #[]) :
     MetaM (Index RuleInfo) := do
-  let mut index : Index RuleInfo := {}
-  for entry in ← getIbubbleBackwardLemmas do
-    unless overridden localRules .backward entry.decl do
-      let rule := theoremRule .global .backward entry.decl entry.successProbability
-      index := index.add rule rule.indexingMode
-  return index
+  (← getIbubbleBackwardLemmas).foldlM (init := {}) λ index entry => do
+    if localRules.any λ rule => rule.kind == .backward && rule.decl == entry.decl then
+      return index
+    return (← backwardTheoremRules .global entry.decl entry.successProbability).foldl
+      (init := index) λ index rule => index.add rule rule.indexingMode
 
 def localTheoremIndex (rules : Array LocalTheoremRule) :
     MetaM (Index RuleInfo) := do
@@ -98,6 +113,10 @@ def localTheoremIndex (rules : Array LocalTheoremRule) :
     match localRule.action with
     | .erase => pure ()
     | .insert probability =>
+      if localRule.kind == .backward then
+        for rule in ← backwardTheoremRules .local localRule.decl probability do
+          index := index.add rule rule.indexingMode
+      else
         let rule := theoremRule .local localRule.kind localRule.decl probability
         index := index.add rule rule.indexingMode
   return index

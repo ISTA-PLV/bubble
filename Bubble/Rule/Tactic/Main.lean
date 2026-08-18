@@ -29,7 +29,7 @@ def run : RuleBuilder → RuleRunner
   | .tactic .imodIntro => Rule.Tactic.IModIntro.run
   | .tactic .imod => Rule.Tactic.IMod.run
   | .tactic .isplit => Rule.Tactic.ISplit.run
-  | .backward => Rule.Backward.run
+  | .backward _ => Rule.Backward.run
   | .forward => fun _ => return RuleOutput.ofSpecs #[]
 
 end Bubble.RuleBuilder

@@ -38,9 +38,10 @@ private def mkRuleApplicationTactic (rapp : Rapp)
     (config : SearchConfig) : MetaM (TSyntax `tactic) := do
   let fallback ← `(tactic| skip)
   match rapp.appliedRule.info.builder with
-  | .backward =>
+  | .backward _ =>
       let premiseSplits := splits.extract 0 (splits.size - 1)
-      mkIApply (mkIdent rapp.appliedRule.id.name.eraseMacroScopes) premiseSplits
+      let decl := mkIdent rapp.appliedRule.id.name.eraseMacroScopes
+      mkIApply decl premiseSplits
   | .forward => pure fallback
   | .tactic .ipureIntro =>
       if config.pureStop? then `(tactic| ipureintro)

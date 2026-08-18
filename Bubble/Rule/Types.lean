@@ -58,8 +58,24 @@ instance : ToString RuleBuilderKind where
 
 end RuleBuilderKind
 
-/- A built-in proof-mode expansion.  The descriptor is data, rather than a
-stored closure, so rules remain comparable, hashable, and replayable. -/
+/-- The application selected when a theorem is registered as a backward rule. -/
+inductive BackwardRuleForm
+  | direct
+  | mp
+  | mpr
+  deriving Inhabited, BEq, Hashable, Ord
+
+namespace BackwardRuleForm
+
+instance : ToString BackwardRuleForm where
+  toString
+    | .direct => "direct"
+    | .mp => "mp"
+    | .mpr => "mpr"
+
+end BackwardRuleForm
+
+/-- A built-in proof-mode expansion. -/
 inductive TacticDescr where
   | identity
   | applyHyps
@@ -94,11 +110,11 @@ instance : ToString TacticDescr where
 
 end TacticDescr
 
-/- Executable rule descriptor.  `RuleBuilderKind` remains the user-facing
+/-- Executable rule descriptor.  `RuleBuilderKind` remains the user-facing
 classification stored in `RuleId`; this type says how a selected rule runs. -/
 inductive RuleBuilder where
   | tactic (descr : TacticDescr)
-  | backward
+  | backward (form : BackwardRuleForm := .direct)
   | forward
   deriving Inhabited, BEq, Hashable, Ord
 
@@ -107,17 +123,17 @@ namespace RuleBuilder
 instance : ToString RuleBuilder where
   toString
     | .tactic descr => s!"tactic {descr}"
-    | .backward => "backward"
+    | .backward form => s!"backward {form}"
     | .forward => "forward"
 
 end RuleBuilder
 
--- [Warning] RuleId should be made unique within our rule sets
 structure RuleId where
   name : Name
   kind : RuleBuilderKind
   phase : RulePhase
   scope : RuleScope
+  variant : Nat := 0
   deriving Inhabited, BEq, Hashable
 
 namespace RuleId
@@ -126,13 +142,16 @@ protected def compare : RuleId → RuleId → Ordering :=
   compareLex (compareOn (·.kind)) $
   compareLex (compareOn (·.phase)) $
   compareLex (compareOn (·.scope)) $
-  fun r₁ r₂ => r₁.name.cmp r₂.name
+  compareLex (λ r₁ r₂ => r₁.name.cmp r₂.name) $
+  compareOn (·.variant)
 
 instance : Ord RuleId where
   compare := RuleId.compare
 
 instance : ToString RuleId where
-  toString r := s!"{r.phase}|{r.kind}|{r.scope}|{r.name}"
+  toString r :=
+    let suffix := if r.variant == 0 then "" else s!"|{r.variant}"
+    s!"{r.phase}|{r.kind}|{r.scope}|{r.name}{suffix}"
 
 end RuleId
 
