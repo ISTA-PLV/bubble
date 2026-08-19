@@ -40,6 +40,8 @@ private def wpiF' {R} (Me : CoPset) (wpi : DiscreteO CoPset × ITree E R × (R �
     DiscreteO CoPset × ITree E R × (R → PROP) → PROP :=
   λ ⟨Ms, t, Φ⟩ => wpiF H (λ Ms t Φ => wpi ⟨⟨Ms⟩, t, Φ⟩) Ms.1 Me t Φ
 
+attribute [local ibubble backward 1%] IHandler.ihandle_mono
+
 @[ibubble backward 75%]
 theorem wpiF_mono {R} (wp1 wp2 : CoPset → ITree E R → (R → PROP) → PROP) Me :
     □ (∀ t Φ, wp1 ∅ t Φ -∗ wp2 ∅ t Φ) -∗
@@ -50,11 +52,10 @@ theorem wpiF_mono {R} (wp1 wp2 : CoPset → ITree E R → (R → PROP) → PROP)
     -- iassumption
   | tau t' => ibubble
   -- iapply Hwand; iassumption
-  | vis i k =>
-  iintro %Φ Hwp; imod Hwp; imodintro
-  iapply H.ihandle_mono i (λ a => wp1 ∅ (k a) Φ) _
-    (λ a => wp1 ∅ (k a) (fun _ => iprop(False))) _
-    <;> ibubble
+  | vis i k => ibubble
+  -- iintro %Φ Hwp; imod Hwp; imodintro
+  -- iapply H.ihandle_mono i (λ a => wp1 ∅ (k a) Φ) _
+  --   (λ a => wp1 ∅ (k a) (fun _ => iprop(False))) _
   -- · iintro %_; iapply Hwand
   -- · iintro !> %_; iapply Hwand
   -- · iassumption
@@ -62,13 +63,12 @@ theorem wpiF_mono {R} (wp1 wp2 : CoPset → ITree E R → (R → PROP) → PROP)
 private instance {R Me} : BIMonoPred (wpiF' (R:=R) H Me) where
   mono_pred := by
     intro Φ Ψ HΦ HΨ
-    iintro #H %pair Hsim
-    rcases pair with ⟨_, _, _⟩
-    simp only [wpiF']
-    ibubble simp
+    unfold wpiF'; iintro #H %⟨_, _, _⟩ Hsim
+    ibubble
     -- iapply wpiF_mono $$ [] Hsim
     -- iintro !> %t %Φ1
     -- iapply H
+
   mono_pred_ne := by
     intro wp Hwp; constructor; intro n ⟨Ms1, t1, Ψ1⟩ ⟨Ms2, t2, Ψ2⟩ ⟨HMs, Ht, HΨ⟩
     simp at HMs Ht HΨ; subst HMs Ht
@@ -95,7 +95,7 @@ syntax (name := wpiNotation) "WPi " term:20 " @> " term:20 "; " term:max
   ("," term:max)? wpPostcond : term
 
 @[macro wpiNotation]
-meta def wpiMacro : Lean.Macro := fun stx => do
+meta def wpiMacro : Lean.Macro := λ stx => do
   match stx with
   | `(WPi $t:term @> $H:term; $Ms:term, $Me:term $postcond:wpPostcond) =>
     let (Φ, _) ← Iris.parseWpPostcond postcond
@@ -124,16 +124,22 @@ theorem wpi_unfold {R} (t : ITree E R) Φ :
   apply equiv_iff.mp
   apply least_fixpoint_unfold
 
+-- [TODO]: Can we automate this?
 theorem fupd_wpi_empty (Φ : R → PROP) :
     WPi t @> H;Ms,Me {{ Φ }} ⊣⊢ |={Ms, ∅}=> WPi t @> H;∅,Me {{ Φ }} :=
     (wpi_unfold _ _).trans <| by
   unfold wpiF; isplit <;> iintro >Hwp
-  · imodintro; iapply wpi_unfold; unfold wpiF; imodintro; iassumption
-  · ihave H := wpi_unfold $$ Hwp; unfold wpiF; iassumption
+  · imodintro; iapply wpi_unfold; unfold wpiF;
+    ibubble
+    -- imodintro; iassumption
+  · ihave H := wpi_unfold $$ Hwp; unfold wpiF;
+    ibubble
+    -- iassumption
 
 section instances
 
 open ProofMode
+-- [TODO]: Can we automate this? why [fupd_wpi_empty] does not work?
 instance elimModal_fupd_wpi p E1 E2 E3 (P : PROP) :
     ElimModal True p io false
       iprop(|={E1,E2}=> P) P
@@ -142,10 +148,10 @@ instance elimModal_fupd_wpi p E1 E2 E3 (P : PROP) :
     cases p <;> simp
     · iintro ⟨HP, Hwand⟩; iapply fupd_wpi_empty
       imod HP; ihave Hwp := Hwand $$ HP
-      iapply fupd_wpi_empty $$ Hwp
+      iapply (fupd_wpi_empty Φ).mp $$ Hwp
     · iintro ⟨#HP, Hwand⟩; iapply fupd_wpi_empty
       imod HP; ihave Hwp := Hwand $$ HP
-      iapply fupd_wpi_empty $$ Hwp
+      iapply (fupd_wpi_empty Φ).mp $$ Hwp
 
 instance elimModal_wpi_wpi p H1 H2 (t1 : ITree E1 R1) (t2 : ITree E2 R2) Ms Me1 Me2 Φ1 Φ2 :
     ElimModal (PROP:=PROP) True p io false
@@ -155,8 +161,9 @@ instance elimModal_wpi_wpi p H1 H2 (t1 : ITree E1 R1) (t2 : ITree E2 R2) Ms Me1 
     cases p <;> simp
     all_goals
       iintro ⟨HΦ, Hwand⟩; ihave HΦ := fupd_wpi_empty $$ HΦ
-      iapply fupd_wpi_empty; imod HΦ; imodintro
-      iapply Hwand $$ HΦ
+      ibubble with [backward fupd_wpi_empty 75%]
+      -- iapply fupd_wpi_empty; imod HΦ; imodintro
+      -- iapply Hwand $$ HΦ
 
 instance elimModal_wpi_fupd p E1 E2 E3 (P : PROP) :
     ElimModal True p io false
@@ -166,7 +173,8 @@ instance elimModal_wpi_fupd p E1 E2 E3 (P : PROP) :
     cases p <;> simp
     all_goals
       iintro ⟨HΦ, Hwand⟩; ihave HΦ := fupd_wpi_empty $$ HΦ
-      imod HΦ; iapply Hwand $$ HΦ
+      ibubble
+      -- imod HΦ; iapply Hwand $$ HΦ
 
 end instances
 
@@ -203,14 +211,23 @@ theorem wpi_tau {R} (Φ : R → PROP) (t : ITree E R) :
 theorem wpi_tau' {R} (Φ : R → PROP) (t : ITree E R) :
     WPi t @> H;Ms,Me {{ Φ }} ⊢ WPi t.tau @> H;Ms,Me {{ Φ }} := by
   ibubble with [backward wpi_tau]
+  -- iintro Hwp; iapply wpi_tau $$ Hwp
 
-@[ibubble backward 75%]
 theorem wpi_vis {R} (Φ : R → PROP) (i : E.I) (k : E.O i → ITree E R) :
     (WPi (ITree.vis i k) @> H;Ms,Me {{ Φ }}) ⊣⊢
     (|={Ms, ∅}=> H.ihandle i
       (λ a => WPi (k a) @> H; ∅,Me {{ Φ }})
       (λ a => WPi (k a) @> H; ∅,Me {{ λ _ => iprop(False) }})) :=
   wpi_unfold _ _
+
+@[ibubble backward 75%]
+theorem wpi_vis' {R} (Φ : R → PROP) (i : E.I) (k : E.O i → ITree E R) :
+    (|={Ms, ∅}=> H.ihandle i
+      (λ a => WPi (k a) @> H; ∅,Me {{ Φ }})
+      (λ a => WPi (k a) @> H; ∅,Me {{ λ _ => iprop(False) }})) -∗
+    (WPi (ITree.vis i k) @> H;Ms,Me {{ Φ }}) := by
+  ibubble with [backward wpi_vis]
+  -- iintro Hwp; iapply wpi_vis $$ Hwp
 
 theorem wpi_trigger_bind {E' A} [E' -< E] (H' : IHandler PROP E') [InH H' H]
     (i : E'.I) (k : E'.O i → ITree E A) (Φ : A → PROP) :
@@ -223,13 +240,13 @@ theorem wpi_trigger_bind {E' A} [E' -< E] (H' : IHandler PROP E') [InH H' H]
   let e := Subeffect.map (E₂ := E) i
   iapply H.ihandle_mono e.fst (λ a => WPi (k (e.snd a)) @> H; ∅,Me {{ Φ }}) _
     (λ a => WPi (k (e.snd a)) @> H; ∅,Me {{ fun _ => iprop(False) }}) _
-  rotate_left 2
+  · ibubble
+    -- iintro %r $
+  · ibubble
+    -- iintro !> %a $
   · iapply InH.is_inH $$ HH
-  all_goals ibubble
-  -- · iintro %r $
-  -- · iintro !> %a $
+    /- [Note]: `HH` is needed to infer the source event hidden by `Subeffect.map` -/
 
-@[ibubble backward 75%]
 theorem wpi_trigger {E'} [E' -< E] (H' : IHandler PROP E') [InH H' H]
     (i : E'.I) (Φ : E'.O i → PROP) :
     (|={Ms, ∅}=> H'.ihandle i
@@ -243,7 +260,8 @@ theorem wpi_trigger {E'} [E' -< E] (H' : IHandler PROP E') [InH H' H]
     (λ _ => iprop(False)) _
   · ibubble
     -- iintro %r HΦ; iapply wpi_pure'; iexact HΦ
-  · iintro !> %a Hfalse; icases Hfalse with ⟨⟩
+  · ibubble
+    -- iintro !> %a Hfalse; icases Hfalse with ⟨⟩
   · iapply InH.is_inH $$ HH
 
 end wpi_unfold
@@ -252,48 +270,51 @@ section wpi_induction
 
 variable {E R} {Ms Me : CoPset} {H : IHandler PROP E}
 
--- TODO: Is this version ever useful?
 theorem wpi_ind_mask (G : CoPset → ITree E R → (R → PROP) → PROP)
    [∀ Ms t, OFE.NonExpansive (G Ms t)] :
     □ (∀ Ms t Φ, wpiF H (λ Ms' t' Ψ => iprop(G Ms' t' Ψ ∧ WPi t' @> H;Ms',Me {{ Ψ }})) Ms Me t Φ -∗ G Ms t Φ) ⊢
-    ∀ Ms t Φ, WPi t @> H;Ms,Me {{ Φ }} -∗ G Ms t Φ := by
+    (∀ Ms t Φ, WPi t @> H;Ms,Me {{ Φ }} -∗ G Ms t Φ) := by
   iintro #HPre %Ms %t %Φ Hwp; unfold wpi
   let G' : (DiscreteO CoPset × _ × _) → _ := λ ⟨⟨Ms⟩, t, Φ⟩ => G Ms t Φ
-  have : OFE.NonExpansive G' := by sorry
+  have : OFE.NonExpansive G' := by
+    constructor; intro n ⟨⟨Ms₁⟩, t₁, Φ₁⟩ ⟨⟨Ms₂⟩, t₂, Φ₂⟩ ⟨rfl, Ht, HΦ⟩
+    simp [G'] at *; subst Ht; apply OFE.NonExpansive.ne HΦ
   iapply least_fixpoint_ind (wpiF' H Me) G' $$ [] %⟨⟨Ms⟩, t, Φ⟩ Hwp
-  iintro !> %p HwpiF
-  rcases p with ⟨⟨_⟩, _, _⟩
-  simp only [wpiF', G']
+  iintro !> %⟨⟨_⟩, _, _⟩ HwpiF; unfold wpiF'
   ibubble
+  -- simp only [G']
   -- iapply HPre
   -- iapply wpiF_mono $$ [] HwpiF
   -- iintro !> %_ %_ $
 
 variable (G : ITree E R → (R → PROP) → PROP) [∀ t, OFE.NonExpansive (G t)]
 
+@[local ibubble backward 50%]
 theorem wpi_ind :
     □ (∀ t Φ, wpiF H (λ Ms' t' Ψ => iprop(G t' Ψ ∧ WPi t' @> H;Ms',Me {{ Ψ }})) ∅ Me t Φ -∗ G t Φ) ⊢
-    ∀ t Φ, WPi t @> H;∅,Me {{ Φ }} -∗ G t Φ := by
+    (∀ t Φ, WPi t @> H;∅,Me {{ Φ }} -∗ G t Φ) := by
   iintro #HPre %t %Φ Hwp
   let G' := λ (Ms : CoPset) t Φ => iprop(<affine> ⌜Ms = ∅⌝ -∗ G t Φ)
-  have : ∀ Ms t, OFE.NonExpansive (G' Ms t) := by sorry
-  iapply wpi_ind_mask G' $$ [] Hwp; rotate_left 1; itrivial
-  -- imodintro
-  iintro !> %Ms %t %Φ Hwpi %hp; subst hp
-  ibubble simp pureStop
+  have : ∀ Ms t, OFE.NonExpansive (G' Ms t) := by
+    intro Ms t; constructor; intro n Φ₁ Φ₂ HΦ; simp [G'];
+    exact wand_ne.ne .rfl <| OFE.NonExpansive.ne HΦ
+  iapply wpi_ind_mask G' $$ [] Hwp
+    <;> ibubble simp pureBy simp
+  -- iintro !> %Ms %t %Φ Hwpi %hp; subst hp
   -- iapply HPre
   -- iapply wpiF_mono $$ [] Hwpi
   -- iintro !> %_ %_ HG
   -- isplit
   -- · icases HG with ⟨HG, -⟩; iapply HG $$ [//]
   -- · icases HG with ⟨-, $⟩
+  -- itrivial
 
 theorem wpi_iter :
     □ (∀ t Φ, wpiF H (λ _ => G) ∅ Me t Φ -∗ G t Φ) ⊢
-    ∀ t Φ, WPi t @> H;∅,Me {{ Φ }} -∗ G t Φ := by
-  iintro #HRet %t %Φ
-  iapply wpi_ind $$ []
-  ibubble simp
+    (∀ t Φ, WPi t @> H;∅,Me {{ Φ }} -∗ G t Φ) := by
+  ibubble
+  -- iintro #HRet %t %Φ
+  -- iapply wpi_ind $$ []
   -- iintro !> %t %Φ HwpiF
   -- iapply HRet
   -- iapply wpiF_mono $$ [] HwpiF
@@ -306,7 +327,7 @@ theorem wpi_iter' :
          (λ a => G (k a) Φ)
          (λ a => G (k a) (λ _ => iprop(False)))) -∗
            G (ITree.vis i k) Φ) -∗
-    ∀ t Φ, WPi t @> H;∅,Me {{ Φ }} -∗ G t Φ := by
+    (∀ t Φ, WPi t @> H;∅,Me {{ Φ }} -∗ G t Φ) := by
   iintro #HPure #HTau #HVis %t %Φ
   iapply wpi_iter $$ []
   iintro !> %t %Φ HwpiF; unfold wpiF
@@ -321,7 +342,9 @@ section wpi_lemmas
 
 variable {E R} {Ms Me : CoPset} {H : IHandler PROP E}
 
--- @[ibubble backward 75%]
+attribute [local ibubble backward 10%] IHandler.ihandle_mono
+
+@[local ibubble backward 25%]
 theorem wpi_wand (Φ Ψ : R → PROP) :
     WPi t @> H;Ms,Me {{ Φ }} -∗
     (∀ r, Φ r -∗ Ψ r) -∗
@@ -335,19 +358,18 @@ theorem wpi_wand (Φ Ψ : R → PROP) :
     refine forall_ne λ Ψ => wand_ne.ne ?_ .rfl
     exact forall_ne λ r => wand_ne.ne (Hx r) .rfl
   iapply wpi_iter' G $$ [] [] [] Hwp Hwand
-  · ibubble
-    -- iintro !> %Φ %r >Hwpi %Ψ Hwand
-    -- iapply wpi_pure; iapply Hwand $$ [$]
-  · ibubble
-    -- iintro !> %Φ %t >Hwpi %Ψ Hwand
-    -- iapply wpi_tau; iapply Hwpi $$ Hwand
-  · iintro !> %Φ %i %k >Hwpi %Ψ Hwand
-    iapply wpi_vis; imodintro
-    iapply H.ihandle_mono $$ [Hwand] [] Hwpi
-      <;> ibubble
-    -- · iintro %_ HG; iapply HG $$ Hwand
-    -- · iintro !> %_ HG; iapply HG; iintro %_ ⟨⟩
+    <;> ibubble
+  -- · iintro !> %Φ %r >Hwpi %Ψ Hwand
+  --   iapply wpi_pure; iapply Hwand $$ [$]
+  -- · iintro !> %Φ %t >Hwpi %Ψ Hwand
+  --   iapply wpi_tau; iapply Hwpi $$ Hwand
+  -- · iintro !> %Φ %i %k >Hwpi %Ψ Hwand
+  --   iapply wpi_vis; imodintro
+  --   iapply H.ihandle_mono $$ [Hwand] [] Hwpi
+  --   · iintro %_ HG; iapply HG $$ Hwand
+  --   · iintro !> %_ HG; iapply HG; iintro %_ ⟨⟩
 
+@[local ibubble backward 25%]
 theorem wpi_fupd_empty_2 (Φ : R → PROP) :
     WPi t @> H; Ms, ∅ {{ v, iprop(|={∅, Me}=> Φ v) }} ⊢
     WPi t @> H; Ms, Me {{ Φ }}
@@ -361,26 +383,21 @@ theorem wpi_fupd_empty_2 (Φ : R → PROP) :
     refine forall_ne λ Φ => wand_ne.ne ?_ .rfl
     exact forall_ne λ r => wand_ne.ne (HΨ r) .rfl
   iapply wpi_iter' G $$ [] [] [] Hwp
-  · ibubble
-    -- iintro !> %Ψ %r >HΨ %Φ Hwand
-    -- iapply wpi_pure'
-    -- iapply Hwand $$ HΨ
-  · ibubble
-    -- iintro !> %Ψ %t >HΨ %Φ Hwand
-    -- iapply wpi_tau
-    -- iapply HΨ $$ Hwand
-  · iintro !> %Ψ %i %k >HΨ %Φ Hwand
-    iapply wpi_vis; imodintro
-    iapply H.ihandle_mono $$ [Hwand] [] HΨ
-      <;> ibubble
-    -- · iintro %_ HG
-    --   iapply HG $$ Hwand
-    -- · iintro !> %_ HG
-    --   iapply HG
-    --   iintro %_ Hfalse
-    --   icases Hfalse with ⟨⟩
-  · iintro %r $
+    <;> ibubble
+  -- · iintro !> %Ψ %r >HΨ %Φ Hwand
+  --   iapply wpi_pure'
+  --   iapply Hwand $$ HΨ
+  -- · iintro !> %Ψ %t >HΨ %Φ Hwand
+  --   iapply wpi_tau
+  --   iapply HΨ $$ Hwand
+  -- · iintro !> %Ψ %i %k >HΨ %Φ Hwand
+  --   iapply wpi_vis; imodintro
+  --   iapply H.ihandle_mono $$ [Hwand] [] HΨ
+  --   · iintro %_ HG; iapply HG $$ Hwand
+  --   · iintro !> %_ HG; iapply HG; iintro %_ ⟨⟩
+  -- · iintro %r $
 
+@[local ibubble backward 25%]
 theorem wpi_fupd_empty_1 (Φ : R → PROP) :
     WPi t @> H; Ms, Me {{ Φ }} ⊢
     WPi t @> H; Ms, ∅ {{ v, iprop(|={∅, Me}=> Φ v) }}
@@ -389,8 +406,7 @@ theorem wpi_fupd_empty_1 (Φ : R → PROP) :
   let G := λ t (Ψ : R → PROP) =>
     WPi t @> H; ∅,∅ {{ v, iprop(|={∅, Me}=> Ψ v) }}
   have : ∀ t, OFE.NonExpansive (G t) := by
-    intro t; constructor
-    intro n Ψ₁ Ψ₂ HΨ; simp [G]
+    intro t; constructor; intro n Ψ₁ Ψ₂ HΨ; simp [G]
     exact OFE.NonExpansive.ne (f := wpi H ∅ ∅ t) <|
       λ v => BIFUpdate.ne.ne (HΨ v)
   iapply wpi_iter' G $$ [] [] [] Hwp
@@ -403,31 +419,30 @@ theorem wpi_fupd_empty_1 (Φ : R → PROP) :
   · iintro !> %Ψ %i %k >HΨ; simp [G]
     iapply wpi_vis; imodintro
     iapply H.ihandle_mono $$ [] [] HΨ
-    · iintro %_ $
-    · iintro !> %_ _
-      -- [TODO] Fix me!!!
-      -- ibubble with [backward wpi_fupd_empty_2 75%]
-      iapply wpi_fupd_empty_2
-      iapply wpi_wand $$ [$]
-      ibubble
-      -- iintro %_ >⟨⟩
+      <;> ibubble
+    -- · iintro %_ $
+    -- · iintro !> %_ _
+    --   iapply wpi_fupd_empty_2
+    --   iapply wpi_wand $$ [$]
+    --   iintro %_ >⟨⟩
 
 theorem wpi_fupd_empty (Φ : R → PROP) :
     WPi t @> H; Ms, Me {{ Φ }} ⊣⊢
-    WPi t @> H; Ms, ∅ {{ v, iprop(|={∅, Me}=> Φ v) }}
-     := ⟨wpi_fupd_empty_1 _, wpi_fupd_empty_2 _⟩
+    WPi t @> H; Ms, ∅ {{ v, iprop(|={∅, Me}=> Φ v) }} := by
+  ibubble
+  -- exact ⟨wpi_fupd_empty_1 _, wpi_fupd_empty_2 _⟩
 
 theorem wpi_fupd (Φ : R → PROP) :
     (WPi t @> H; Ms, Me {{ Φ }}) ⊣⊢
     (WPi t @> H; Ms, Me {{ v, iprop(|={Me}=> Φ v) }})
      := by
-  isplit <;> iintro Hwp
-  · ibubble simp with [backward wpi_wand]
-    -- iapply wpi_wand $$ Hwp; iintro %_ $ //
-  · iapply wpi_fupd_empty
-    iapply wpi_wand $$ [Hwp]
-    · iapply (wpi_fupd_empty (Me:=Me)) $$ Hwp
-    iintro %_ > > $ //
+  ibubble
+  -- isplit <;> iintro Hwp
+  -- · iapply wpi_wand $$ Hwp; iintro %_ $ //
+  -- · iapply wpi_fupd_empty
+  --   iapply wpi_wand $$ [Hwp]
+  --   · iapply (wpi_fupd_empty (Me:=Me)) $$ Hwp
+  --   iintro %_ > > $ //
 
 theorem wpi_bind' {A} M' t (k : A → ITree E R) (Φ : R → PROP) :
     WPi t @> H; Ms, M' {{ r, WPi k r @> H;M',Me {{ Φ }} }} ⊢
@@ -436,40 +451,34 @@ theorem wpi_bind' {A} M' t (k : A → ITree E R) (Φ : R → PROP) :
   let G := λ t (Φ : A → PROP) =>
     iprop(∀ Ψ, (∀ r, Φ r -∗ WPi k r @> H; M', Me {{ Ψ }})
       -∗ WPi t >>= k @> H; ∅, Me {{ Ψ }})
-  have : ∀ t, OFE.NonExpansive (G t) := by sorry
+  have : ∀ t, OFE.NonExpansive (G t) := by
+    intro t; constructor; intro n Φ₁ Φ₂ HΦ; simp [G]
+    refine forall_ne λ x => wand_ne.ne ?_ .rfl
+    exact forall_ne λ x => wand_ne.ne (HΦ x) .rfl
   iapply wpi_iter' G $$ [] [] [] Hwp
-  rotate_right 1; focus iintro %_ $
-  · ibubble simp
-    -- iintro !> %Φ %r >Hwpi %Ψ Hwand; simp
-    -- iapply Hwand $$ [$]
-  · ibubble simp
-    -- iintro !> %Φ %t >Hwpi %Ψ Hwand; simp
-    -- iapply wpi_tau; iapply Hwpi $$ Hwand
-  · iintro !> %Φ %i %k >Hwpi %Ψ Hwand; simp
-    iapply wpi_vis; imodintro
-    iapply H.ihandle_mono $$ [Hwand] [] Hwpi
-      <;> ibubble
-    -- · iintro %_ HG; iapply HG $$ Hwand
-    -- · iintro !> %_ HG; iapply HG; iintro %_ ⟨⟩
+    <;> ibubble simp
+  -- · iintro !> %Φ %r >Hwpi %Ψ Hwand; simp
+  --   iapply Hwand $$ [$]
+  -- · iintro !> %Φ %t >Hwpi %Ψ Hwand; simp
+  --   iapply wpi_tau; iapply Hwpi $$ Hwand
+  -- · iintro !> %Φ %i %k >Hwpi %Ψ Hwand; simp
+  --   iapply wpi_vis; imodintro
+  --   iapply H.ihandle_mono $$ [Hwand] [] Hwpi
+  --   · iintro %_ HG; iapply HG $$ Hwand
+  --   · iintro !> %_ HG; iapply HG; iintro %_ ⟨⟩
+  -- · iintro %_ $
 
--- specialized version where M' = Ms. This is especially useful for the Ms = Me case.
-@[ibubble backward 75%]
+/-- specialized version where M' = Ms. This is especially useful for the Ms = Me case. -/
 theorem wpi_bind {A} t (k : A → ITree E R) (Φ : R → PROP) :
     WPi t @> H; Ms {{ r, WPi k r @> H;Ms,Me {{ Φ }} }} ⊢
     WPi t >>= k @> H; Ms, Me {{ Φ }} := wpi_bind' _ _ _ _
 
 end wpi_lemmas
 
-section wp_itree_invariant
-
--- TODO: Invariant rules from the Coq development are omitted for now.
--- This Lean repository does not yet expose an invariant API with
--- `inv`, `inv_acc`, or `inv_acc_timeless`, so the corresponding masked
--- WPi lemmas cannot be stated here yet.
-
-end wp_itree_invariant
-
 section wp_itree_translation
+
+attribute [local ibubble backward 10%] IHandler.ihandle_mono
+attribute [local ibubble backward 10%] wpi_bind
 
 -- `f` can interpret each event `E1` as an `itree E2 E1.I`, as a way to
 -- "translate" from events `E1` to `E2`
@@ -479,6 +488,7 @@ variable {E1 E2 : Effect} {Ms Me : CoPset}
   (f : (i : E1.I) → ITree E2 (E1.O i))
 
 /-- Translate a WPi proof across handlers by interpreting each `E₁` event as an `E₂` itree. -/
+@[local ibubble backward 10%]
 theorem wpi_translation {R} (t : ITree E1 R) (Φ : R → PROP) :
     WPi t @> H1; Ms, Me {{ Φ }} -∗
     □ (∀ i (k : E1.O i → ITree E1 R) Ψ,
@@ -504,10 +514,11 @@ theorem wpi_translation_seq {R} (t : ITree E1 R) (Φ : R → PROP) :
     □ (∀ i Ψ, H1.ihandle i Ψ (λ _ => iprop(True)) -∗
         WPi (f i) @> H2; ∅ {{ Ψ }}) -∗
     WPi (ITree.interp f t) @> H2; Ms,Me {{ Φ }} := by
-  iintro Hwp #Hwand; iapply wpi_translation $$ Hwp
-  iintro !> %i %k %Ψ Hh; iapply wpi_bind; iapply Hwand
-  iapply H1.ihandle_mono $$ [] [] Hh
-    <;> ibubble pureBy simp
+  ibubble simp pureBy simp
+  -- iintro Hwp #Hwand; iapply wpi_translation $$ Hwp
+  -- iintro !> %i %k %Ψ Hh; iapply wpi_bind; iapply Hwand
+  -- iapply H1.ihandle_mono $$ [] [] Hh
+  --   <;> ibubble pureBy simp
   -- · iintro %a $
   -- · iintro !> %t Hwp; exact true_intro
 
@@ -520,17 +531,22 @@ variable {E : Effect} {Ms Me : CoPset}
   {H1 : IHandler PROP E} {H2 : IHandler PROP E}
   [Hwand : WandH H1 H2]
 
+attribute [local ibubble backward 10%] IHandler.ihandle_mono
+attribute [local ibubble backward 10%] WandH.is_wandH
+attribute [local ibubble backward 25%] wpi_translation
+attribute [local simp] Effect.trigger
+
 theorem wpi_wandH {R} (t : ITree E R) (Φ : R → PROP) :
     WPi t @> H1; Ms, Me {{ Φ }} ⊢ WPi t @> H2; Ms, Me {{ Φ }} := by
   iintro Hwp
-  have ht : t = t.interp (λ i => E.trigger i) := by simp
-  rw (occs:=[2]) [ht]
-  iapply wpi_translation $$ Hwp
-  iintro !> %i %k %Ψ Hh
-  simp [Effect.trigger]; iapply wpi_vis; imodintro
-  iapply Hwand.is_wandH
-  iapply H1.ihandle_mono i $$ [] [] Hh
-    <;> ibubble
+  have ht : t = t.interp (λ i => E.trigger i) := by simp [-Effect.trigger]
+  rw (occs:=[2]) [ht]; clear ht
+  ibubble simp
+  -- iapply wpi_translation $$ Hwp
+  -- iintro !> %i %k %Ψ Hh
+  -- simp [Effect.trigger]; iapply wpi_vis; imodintro
+  -- iapply Hwand.is_wandH
+  -- iapply H1.ihandle_mono i $$ [] [] Hh
   -- · iintro %a $
   -- · iintro !> %a $
 
@@ -543,44 +559,68 @@ variable {E1 E2 : Effect} {Ms Me : CoPset}
   {H1 : IHandler PROP E1} {H2 : IHandler PROP E2}
   [sub : E1 -< E2] [Hin : InH H1 H2]
 
-theorem wpi_inH {R} (t : ITree E1 R) (Φ : R → PROP) :
+attribute [local ibubble backward 25%] wpi_translation
+attribute [local ibubble backward 10%] IHandler.ihandle_mono
+attribute [local ibubble backward 25%] wpi_trigger_bind
+attribute [local ibubble backward 25%] wpi_fupd_empty_2
+attribute [local ibubble backward 50%] InH.is_inH
+
+@[local ibubble backward 50%]
+theorem wpi_inH_1 (t : ITree E1 R) (Φ : R → PROP) :
+    (WPi t @> H1; Ms, Me {{ Φ }}) -∗
+    (WPi (t.interp (λ i => E1.trigger i)) @> H2; Ms, Me {{ Φ }}) := by
+  ibubble
+  -- iintro Hwp
+  -- iapply wpi_translation $$ Hwp
+  -- iintro !> %i %k %Ψ Hh
+  -- iapply wpi_trigger_bind; imodintro
+  -- iapply H1.ihandle_mono $$ [] [] Hh
+  -- · iintro %a $
+  -- · iintro !> %a $
+
+@[local ibubble backward 50%]
+theorem wpi_inH_2 (t : ITree E1 R) (Φ : R → PROP) :
+    (WPi (t.interp (λ i => E1.trigger i)) @> H2; Ms, Me {{ Φ }}) -∗
+    (WPi t @> H1; Ms, Me {{ Φ }}) := by
+  let emb : (i : E1.I) → ITree E2 (E1.O i) := λ i => E1.trigger i
+  let G : ITree E2 R → (R → PROP) → PROP := λ u Ψ =>
+    iprop(∀ t', ⌜ITree.interp emb t' = u⌝ -∗ (WPi t' @> H1; ∅ {{ Ψ }}))
+  have : ∀ t, OFE.NonExpansive (G t) := by
+    intro t; constructor; intro n x₁ x₂ Hx; simp [G]
+    exact forall_ne λ t' => wand_ne.ne .rfl $ OFE.NonExpansive.ne Hx
+  ihave Hgen : (∀ t Ψ, (WPi t @> H2; ∅ {{ Ψ }}) -∗ G t Ψ) $$ []
+  · iapply wpi_iter' G
+    · iintro !> %Φ %r HΦ; simp [G]; iintro %t' %Heq
+      rcases interp_ret_inv Heq with ⟨rfl⟩
+      ibubble
+      -- imod HΦ; simp [emb] at Heq
+      -- iapply wpi_pure $$ HΦ
+    · iintro !> %Ψ %u Hu; simp [G]; iintro %t' %Heq
+      rcases interp_tau_inv Heq with ⟨t1, rfl, Heq1⟩
+      ibubble pureBy rfl
+      -- imod Hu; iapply wpi_tau';
+      -- iapply Hu $$ %t1 %Heq1
+    · iintro !> %Ψ %i %k >Hik; simp [G]; iintro %t' %Heq
+      rcases interp_vis_inv Heq with ⟨i', k', rfl, rfl, rfl⟩
+      ibubble simp pureBy (first | assumption | rfl)
+      -- simp [emb] at Heq;
+      -- iapply wpi_vis; imodintro
+      -- iapply Hin.is_inH
+      -- iapply H2.ihandle_mono (Subeffect.map i').fst $$ [] [] Hik
+      -- · iintro %a HG; iapply HG; ipureintro; rfl
+      -- · iintro !> %a HG; iapply HG; ipureintro; rfl
+  iintro Hwp; simp [G];
+  ihave Hwp := wpi_fupd_empty $$ Hwp
+  ibubble pureBy rfl
+  -- iapply wpi_fupd_empty_2
+  -- iapply Hgen $$ Hwp; ipureintro; rfl
+
+theorem wpi_inH (t : ITree E1 R) (Φ : R → PROP) :
     (WPi t @> H1; Ms, Me {{ Φ }}) ⊣⊢
     (WPi (t.interp (λ i => E1.trigger i)) @> H2; Ms, Me {{ Φ }}) := by
-  isplit <;> iintro Hwp
-  · iapply wpi_translation $$ Hwp
-    iintro !> %i %k %Ψ Hh
-    iapply wpi_trigger_bind; imodintro
-    iapply H1.ihandle_mono $$ [] [] Hh
-      <;> ibubble
-    -- · iintro %a $
-    -- · iintro !> %a $
-  · let emb : (i : E1.I) → ITree E2 (E1.O i) := λ i => E1.trigger i
-    let G : ITree E2 R → (R → PROP) → PROP := λ u Ψ =>
-      iprop(∀ t', ⌜ITree.interp emb t' = u⌝ -∗ (WPi t' @> H1; ∅ {{ Ψ }}))
-    have : ∀ t, OFE.NonExpansive (G t) := by
-      intro t; constructor; intro n x₁ x₂ Hx; simp [G]
-      exact forall_ne λ t' => wand_ne.ne .rfl $ OFE.NonExpansive.ne Hx
-    ihave Hgen : (∀ t Ψ, (WPi t @> H2; ∅ {{ Ψ }}) -∗ G t Ψ) $$ []
-    · iapply wpi_iter' G
-      · iintro !> %Φ %r HΦ; simp [G]; iintro %t' %Heq
-        imod HΦ; simp [emb] at Heq
-        have Heq' := interp_ret_inv Heq; subst Heq'
-        iapply wpi_pure $$ HΦ
-      · iintro !> %Ψ %u Hu; simp [G]; iintro %t' %Heq
-        imod Hu; rcases interp_tau_inv Heq with ⟨t1, rfl, Heq1⟩
-        iapply wpi_tau; iapply Hu $$ %t1 %Heq1
-      · iintro !> %Ψ %i %k Hik; simp [G]; iintro %t' %Heq
-        imod Hik; simp [emb] at Heq;
-        rcases interp_vis_inv Heq with ⟨i', k', Ht', Hi, Hk⟩
-        subst Ht'; subst Hi; iapply wpi_vis; imodintro
-        subst Hk; iapply Hin.is_inH
-        iapply H2.ihandle_mono (Subeffect.map i').fst $$ [] [] Hik
-          <;> ibubble simp pureBy rfl
-        -- · iintro %a HG; iapply HG; ipureintro; rfl
-        -- · iintro !> %a HG; iapply HG; ipureintro; rfl
-    simp [G]; imod Hwp; iapply wpi_fupd_empty
-    ihave Hwp := wpi_fupd_empty $$ Hwp
-    ibubble pureBy rfl
-    -- iapply Hgen $$ Hwp; ipureintro; rfl
+  ibubble
+  -- isplit
+  -- · iapply wpi_inH_1
+  -- · iapply wpi_inH_2
 
 end wp_itree_inH

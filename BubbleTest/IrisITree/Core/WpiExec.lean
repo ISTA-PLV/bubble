@@ -28,6 +28,9 @@ section wp_itree_const
 
 variable {E : Effect} {R : Type _} {PROP : Type _} [BI PROP] [BIFUpdate PROP]
 
+attribute [local ibubble backward 20%] IHandler.ihandle_mono
+
+
 instance (H : IHandler PROP E) (Φ : R → PROP) :
     OFE.NonExpansive (wpiConstF H Φ) where
   ne {_ wp1 wp2} Hwp := by
@@ -40,30 +43,32 @@ instance (H : IHandler PROP E) (Φ : R → PROP) :
       · intro a; apply Hwp (k a)
       · intro a; apply Hwp (k a)
 
+attribute [local simp] wpiConstF
+
 @[ibubble backward 75%]
 theorem wpiConstF_mono (H : IHandler PROP E) (Φ : R → PROP)
     (wp1 wp2 : ITree E R → PROP) :
     □ (∀ t, wp1 t -∗ wp2 t) -∗
     ∀ t, wpiConstF H Φ wp1 t -∗ wpiConstF H Φ wp2 t := by
   iintro #Hwand %t Hwp
-  cases t <;> simp [wpiConstF]
-  case ret =>
-    ibubble
-    -- iframe
-  case tau t' =>
-    ibubble
-    -- imod Hwp; imodintro; iapply Hwand $$ Hwp
-  case vis i k =>
-    imod Hwp; imodintro; iapply H.ihandle_mono $$ [] [] Hwp
-      <;> ibubble
-    -- · iintro %a Hk; iapply Hwand $$ Hk
-    -- · iintro !> %a Hk; iapply Hwand $$ Hk
+  cases t <;> ibubble simp
+  -- case ret =>
+  --   simp [wpiConstF]; iframe
+  -- case tau t' =>
+  --   simp [wpiConstF]; imod Hwp; imodintro; iapply Hwand $$ Hwp
+  -- case vis i k =>
+  --   simp [wpiConstF]; imod Hwp; imodintro;
+  --   iapply H.ihandle_mono $$ [] [] Hwp
+  --   · iintro %a Hk; iapply Hwand $$ Hk
+  --   · iintro !> %a Hk; iapply Hwand $$ Hk
+
+attribute [-simp] wpiConstF
 
 instance wp_itree_const_mono (H : IHandler PROP E) (Φ : R → PROP) :
     BIMonoPred (wpiConstF H Φ) where
   mono_pred := by
-    intro wp1 wp2 Hne1 Hne2
-    ibubble simp
+    ibubble
+    -- intro wp1 wp2 Hne1 Hne2
     -- iintro #Hwand %t Hwp
     -- iapply wpiConstF_mono $$ Hwand Hwp
   mono_pred_ne.ne n t1 t2 Hdist := by
@@ -103,7 +108,11 @@ section wpi_tp_section
 
 variable {E : Effect} {R : Type _} {PROP : Type _} [BI PROP] [BIFUpdate PROP] [BIAffine PROP]
 
-@[ibubble backward 75%]
+attribute [local ibubble backward 50%] least_fixpoint_unfold_mpr
+attribute [local ibubble backward 20%] IHandler.ihandle_mono
+attribute [local simp] wpiF
+attribute [local simp] wpiConstF
+
 theorem wpi_tp_intro (t : ITree E R) (H : IHandler PROP E) (Φ : R → PROP) :
     WPi t @> H; ∅ {{ Φ }} ⊢ wpi_tp H [λ P => P t] Φ := by
   letI : ∀ t, OFE.NonExpansive (λ Ψ : R → PROP =>
@@ -116,20 +125,21 @@ theorem wpi_tp_intro (t : ITree E R) (H : IHandler PROP E) (Φ : R → PROP) :
     bi_least_fixpoint (wpiConstF H Φ) t))) $$ [] %t %Φ Hwpi
   · iintro !> %t %Ψ Hstep #Hpost
     iapply least_fixpoint_unfold_mpr
-    cases t <;> simp [wpiConstF, wpiF]
-    · ibubble
-      -- imod Hstep; imod Hstep; imodintro
-      -- iapply Hpost $$ [$]
-    · ibubble
-      -- imod Hstep; imodintro
-      -- icases Hstep with ⟨Hconst, -⟩
-      -- iapply Hconst $$ [$]
-    · imod Hstep; imodintro
-      iapply H.ihandle_mono $$ [] [] Hstep
-        <;> ibubble
-      -- · iintro %a ⟨Hconst, -⟩; iapply Hconst $$ [$]
-      -- · iintro !> %a ⟨Hconst, -⟩
-      --   iapply Hconst; iintro !> %r ⟨⟩
+    cases t <;> ibubble simp
+    -- cases t
+    -- · simp [wpiConstF, wpiF]
+    --   imod Hstep; imod Hstep; imodintro
+    --   iapply Hpost $$ [$]
+    -- · simp [wpiConstF, wpiF]
+    --   imod Hstep; imodintro
+    --   icases Hstep with ⟨Hconst, -⟩
+    --   iapply Hconst $$ [$]
+    -- · simp [wpiConstF, wpiF]
+    --   imod Hstep; imodintro
+    --   iapply H.ihandle_mono $$ [] [] Hstep
+    --   · iintro %a ⟨Hconst, -⟩; iapply Hconst $$ [$]
+    --   · iintro !> %a ⟨Hconst, -⟩
+    --     iapply Hconst; iintro !> %r ⟨⟩
   · iintro !> %r $
 
 end wpi_tp_section
@@ -200,7 +210,8 @@ theorem wpi_adequate_ind (Φ : R → PROP)
     simp [wpiConstF]; imod Hwpi
     ispecialize Hc $$ %([λ P => P t]) [Hwpi]
     · simp only [Algebra.BigOpL.bigOpL_cons, Algebra.BigOpL.bigOpL_nil]; iframe
-    simp only [bi_close]; icases Hc with ⟨%Ns, %Hperm, ⟨Hadequate, -⟩⟩
+    simp only [bi_close];
+    icases Hc with ⟨%Ns, %Hperm, ⟨Hadequate, -⟩⟩
     iapply Hadequate $$ %t %s %(λ P => P t) %Mss %C %Hexec %Hperm.symm Hinv
     iintro %_ $
   | step i k _ _ Hhandle =>
@@ -232,7 +243,7 @@ theorem wpi_adequate (Φ : R → PROP)
   ihave Hwpi := wpi_fupd_empty $$ Hwpi
   iapply wpi_adequate_ind _ _ _ t s [λ P => P t] []
     (λ P => P t) C Hexec (by simp) $$ [Hwpi] Hinv []
-    <;> ibubble
+    <;> ibubble with [backward wpi_tp_intro]
   -- iapply wpi_tp_intro $$ Hwpi
   -- iintro %_ $
 
