@@ -34,12 +34,35 @@ private partial def nextActiveGoal? : SearchM Q (Option GoalRef) := do
     return some goalRef
   nextActiveGoal?
 
+/-- Count uses of a theorem declaration on the direct ancestor path of a goal.
+All orientations of the same declaration share one budget. -/
+private partial def theoremUsesOnPath (goalRef : GoalRef) (decl : Name) : SearchM Q Nat := do
+  let goal ← goalRef.get
+  let platform ← goal.parent.get
+  let some parentRappRef := platform.parent? | return 0
+  let parentRapp ← parentRappRef.get
+  let parentRule := parentRapp.appliedRule
+  let usedHere := match parentRule.info.builder with
+    | .backward _ | .forward => if parentRule.id.name == decl then 1 else 0
+    | .tactic _ => 0
+  return usedHere + (← theoremUsesOnPath parentRapp.parent decl)
+
 /-- Run one matched rule, commit its outputs, and emit bubbles for closed Rapps. -/
 private def runRule (goalRef : GoalRef) (matchResult : RuleMatch) :
     SearchM Q RuleCommitResult := do
   let config ← SearchM.getConfig
   trace[ibubble.search]
     "goal {(← goalRef.get).id} trying rule {matchResult.rule.id}"
+  let theoremUses? ← match matchResult.rule.info.builder with
+  | .backward _ | .forward =>
+      let uses ← theoremUsesOnPath goalRef matchResult.rule.id.name
+      if uses >= config.maxTheoremUses then
+        trace[ibubble.search]
+          m!"skipping theorem {matchResult.rule.id.name}: already used {uses} time(s)" ++
+          m!" on this branch (limit {config.maxTheoremUses})"
+        return .failed
+      pure (some uses)
+  | .tactic _ => pure none
   let some input ← mkRuleInput config goalRef matchResult
     | return .failed
   input.state.restore
@@ -47,8 +70,24 @@ private def runRule (goalRef : GoalRef) (matchResult : RuleMatch) :
     matchResult.rule.info.builder.run input
   if output.rappSpecs.isEmpty then
     trace[ibubble.search] "rule {matchResult.rule.id} did not apply to goal {(← goalRef.get).id}"
-  else trace[ibubble.search] "rule {matchResult.rule.id} produced {output.rappSpecs.size} application candidate(s) for goal {(← goalRef.get).id}"
-  let result ← commitRuleOutput goalRef matchResult.rule output
+  else
+    trace[ibubble.search]
+      m!"rule {matchResult.rule.id} produced {output.rappSpecs.size}" ++
+      m!" application candidate(s) for goal {(← goalRef.get).id}"
+  let usedRule := match theoremUses? with
+    | some uses =>
+      /- Multiple use theorem should be given penalty. -/
+        let penalty := Percent.medium ^ uses
+        { matchResult.rule with info := {
+          matchResult.rule.info with
+          successProbability := matchResult.rule.info.successProbability * penalty
+        } }
+    | none => matchResult.rule
+  if !output.rappSpecs.isEmpty && theoremUses?.getD 0 > 0 then
+    trace[ibubble.search]
+      m!"penalized theorem {matchResult.rule.id.name}: {theoremUses?.getD 0}" ++
+      m!" previous use(s), effective probability {usedRule.info.successProbability}"
+  let result ← commitRuleOutput goalRef usedRule output
   match result with
   | .applied closedRapps =>
       /- Emit bubbles for closed Rapps upward. -/

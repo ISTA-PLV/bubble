@@ -33,9 +33,13 @@ structure LocalTheoremRule where
   action : LocalRuleAction
   deriving Inhabited
 
+def defaultMaxTheoremUses : Nat := 2
+
 structure SearchConfig where
   /- maximum depth of the search tree -/
   maxDepth : Nat := 100
+  /- maximum number of uses of one theorem along a search branch -/
+  maxTheoremUses : Nat := defaultMaxTheoremUses
   /- maximum rapp children for each goal -/
   maxRappNumber : Nat := 30
   /- maximum normalization iteration for each goal -/

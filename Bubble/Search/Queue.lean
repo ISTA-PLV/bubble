@@ -41,7 +41,8 @@ def Entry.ofGoal (goalRef : GoalRef) : BaseIO Entry := do
   let goal ← goalRef.get
   return {
     goal := goalRef
-    priority := goal.successProbability
+    /- Metavariable-rich goals are less determined and therefore less useful to expand immediately. -/
+    priority := goal.successProbability * Percent.high ^ goal.unassignedMvars.size
     lastExpanded := goal.lastExpandedInIteration
     added := goal.addedInIteration
   }

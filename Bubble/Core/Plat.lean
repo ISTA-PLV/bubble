@@ -121,6 +121,15 @@ private def spawnResidual (iteration : Iteration) (platRef : PlatRef) (group : G
       bubble := bubble.id
     }
   }
+  trace[ibubble.search]
+    "created residual group {residual.id} from group {group.id} using bubble {bubble.id}; goals {residual.goals}"
+  for residualRef in residualGoals do
+    let residualGoal ← residualRef.get
+    let rendered ← residualGoal.preNormState.runMetaM' do
+      ppGoal residualGoal.preNormGoal
+    trace[ibubble.search]
+      m!"residual goal {residualGoal.id} | slot {residualGoal.slot}" ++
+      m!" | dependencies {residualGoal.unassignedMvars.size}\n{rendered}"
   platRef.modify λ current => (current.setGoals (current.goals ++ residualGoals))
     |>.setGroups (current.groups.push residual)
   return some residualGoals

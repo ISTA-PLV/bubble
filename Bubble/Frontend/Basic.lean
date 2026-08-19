@@ -19,6 +19,10 @@ declare_syntax_cat ibubblePureSolver
 syntax "pureBy" tactic : ibubblePureSolver
 syntax "pureStop" : ibubblePureSolver
 
+/- Bound repeated uses of one theorem along a search branch. -/
+declare_syntax_cat ibubbleTheoremLimit
+syntax "maxTheoremUses" ppSpace num : ibubbleTheoremLimit
+
 /- Local rule edits for one `ibubble` invocation. -/
 declare_syntax_cat ibubbleRuleDirection
 syntax "backward" : ibubbleRuleDirection
@@ -36,9 +40,11 @@ syntax "without" "[" ibubbleErasedRule,* "]" : ibubbleRuleEdit
 
 syntax (name := ibubbleTactic)  "ibubble"
   (ppSpace ibubbleStrategy)? (ppSpace ibubbleNormMode)?
-  (ppSpace ibubblePureSolver)? (ppSpace ibubbleRuleEdit)* : tactic
+  (ppSpace ibubblePureSolver)? (ppSpace ibubbleTheoremLimit)?
+  (ppSpace ibubbleRuleEdit)* : tactic
 syntax (name := ibubbleTactic?) "ibubble?"
   (ppSpace ibubbleStrategy)? (ppSpace ibubbleNormMode)?
-  (ppSpace ibubblePureSolver)? (ppSpace ibubbleRuleEdit)* : tactic
+  (ppSpace ibubblePureSolver)? (ppSpace ibubbleTheoremLimit)?
+  (ppSpace ibubbleRuleEdit)* : tactic
 
 end Bubble
