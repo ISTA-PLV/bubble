@@ -8,8 +8,8 @@ public meta section
 
 namespace Bubble.Search
 
-open Lean Meta
-open Iris.ProofMode
+open Lean Meta Qq
+open Iris.BI Iris.ProofMode
 
 variable {Q : Type} [Queue Q]
 
@@ -27,6 +27,37 @@ private def propagateFootprint (rising generated consumed : Array IrisHyp) :
     if result.any (same? used) then throwError
       "ibubble: footprint invariant violated: resource {used} occurs more than once"
     return result.push used
+
+/- A spatial hypothesis introduced while normalizing a goal cannot escape above
+its normalization step. It must be consumed below, be individually discardable,
+or remain under an absorbing target. -/
+private def generatedHypsAreAccountedFor (goal : Goal)
+    (rising : RisingBubble) : MetaM Bool := do
+  let .normal postGoal postState generated _ := goal.normalizationState
+    | return true
+  let unused := generated.filter fun hyp =>
+    !rising.consumed.any fun consumed => consumed.ivar == hyp.ivar
+  if unused.isEmpty then return true
+  postState.runMetaM' do
+    postGoal.withContext do
+      let type ← instantiateMVars (← postGoal.getType)
+      let some ⟨_, prop, bi, _, hyps, target⟩ := parseIrisGoal? type | return false
+      let targetAbsorbing ← withoutModifyingState do
+        return (match ← trySynthInstanceQ q(@Absorbing $prop $bi $target) with
+          | .some _ => true
+          | .none | .undef => false)
+      if targetAbsorbing then return true
+      let entries := spatialHypEntries hyps
+      for hyp in unused do
+        let some (_, _, type) := entries.find? fun (_, ivar, _) => ivar == hyp.ivar
+          | return false
+        have type : Q($prop) := type
+        let affine ← withoutModifyingState do
+          return (match ← trySynthInstanceQ q(@Affine $prop $bi $type) with
+            | .some _ => true
+            | .none | .undef => false)
+        unless affine do return false
+      return true
 
 /--
   Convert one risingBubble to bubble that can be recorded in the TreeM
@@ -53,6 +84,10 @@ mutual
 private partial def passThroughGoal (goalRef : GoalRef) (rising : RisingBubble) :
     SearchM Q Unit := do
   let goal ← goalRef.get
+  unless ← generatedHypsAreAccountedFor goal rising do
+    trace[ibubble.search]
+      "goal {goal.id} rejected a proof that leaves a generated spatial hypothesis unused"
+    return
   let postState ← match goal.normalizationState with
     | .normal _ state .. => pure state
     | .provenByNorm state .. => pure state
