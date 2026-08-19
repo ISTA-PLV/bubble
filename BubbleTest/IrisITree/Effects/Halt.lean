@@ -37,12 +37,18 @@ section wpi_rules
 variable {PROP : Type _} [BI PROP] [BIFUpdate PROP]  {E : Effect}
   {H : IHandler PROP E} [sub: haltE -< E] [Hin : InH haltH H]
 
+attribute [local ibubble backward 75%] wpi_trigger
+attribute [local ibubble backward 75%] wpi_bind
+attribute [local ibubble backward 50%] fupd_mask_intro
+attribute [local simp] haltH
+
 @[ibubble backward 75%]
 theorem wpi_halt {R} (Φ : R → PROP) :
-    ⊢ WPi HaltE.halt @> H; ⊤ {{ Φ }} := by
-  unfold HaltE.halt; iapply wpi_bind
-  iapply wpi_trigger; simp [haltH]
-  ibubble pureBy simp with [backward fupd_mask_intro]
+    ⊢ WPi halt @> H; ⊤ {{ Φ }} := by
+  unfold halt
+  ibubble simp pureBy simp
+  -- iapply wpi_bind
+  -- iapply wpi_trigger; simp [haltH]
   -- iapply fupd_mask_intro
   -- · exact Std.LawfulSet.empty_subset
   -- iintro Hclose; imod Hclose; itrivial

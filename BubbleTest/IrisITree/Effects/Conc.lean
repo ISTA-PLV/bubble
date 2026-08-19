@@ -23,7 +23,7 @@ def concH : IHandler PROP concE where
     | .kill, _, _ => iprop(|={∅, ⊤}=> True)
   ihandle_mono := by
     iintro %i %Φ %Φ' %Φs %Φs' HΦwand #Hswand HH
-    cases i <;> dsimp only <;> ibubble
+    cases i <;> ibubble simp
     -- · icases HH with ⟨HΦ, HΦs⟩
     --   ihave HΦ' := HΦwand $$ %ForkResult.parent HΦ
     --   isplitl [HΦ']
@@ -40,12 +40,18 @@ variable {PROP : Type _} [BI PROP] [BIFUpdate PROP]
   {E : Effect} {H : IHandler PROP E}
   [concE -< E] [Hin : InH concH H]
 
+attribute [local ibubble backward 50%] fupd_mask_intro
+attribute [local ibubble backward 50%] wpi_trigger_bind
+attribute [local ibubble backward 50%] wpi_trigger
+attribute [local simp] concH
+
 @[ibubble backward 75%]
 theorem wpi_kill M (Φ : PUnit → PROP) :
     True -∗ WPi kill @> H; ⊤, M {{Φ}} := by
-  iintro Ht; unfold kill
-  iapply wpi_trigger_bind; simp [concH]
-  ibubble simp with [backward fupd_mask_intro]
+  unfold kill
+  ibubble simp pureBy simp
+  -- iintro Ht
+  -- iapply wpi_trigger_bind; simp [concH]
   -- iapply fupd_mask_intro_subseteq (by simp) $$ [$]
 
 @[ibubble backward 75%]
@@ -53,11 +59,10 @@ theorem wpi_fork M (Φ : PUnit → PROP) :
     Φ ⟨⟩ -∗
     WPi t @> H; ⊤ {{ _v, iprop(True) }} -∗
     WPi fork t @> H; M {{Φ}} := by
-  iintro HΦ Ht; unfold fork
-  iapply wpi_trigger_bind; simp [concH]
-  ibubble pureBy simp with
-    [backward fupd_mask_intro, backward wpi_wand, backward wpi_bind']
-  -- ibubble pureBy simp with [backward fupd_mask_intro]
+  unfold fork
+  iintro HΦ Ht; iapply wpi_trigger_bind;
+  ibubble simp pureBy simp with [backward wpi_wand 50%, backward wpi_bind' 50%]
+  -- simp [concH]
   -- iapply fupd_mask_intro (by simp); iintro Hm
   -- isplitr [Ht]
   -- · imod Hm; iapply wpi_pure $$ [$]
@@ -70,9 +75,10 @@ theorem wpi_fork M (Φ : PUnit → PROP) :
 theorem wpi_yield (Φ : PUnit → PROP) :
     Φ ⟨⟩ -∗
     WPi yield @> H; ⊤ {{Φ}} := by
-  iintro HΦ; unfold yield
-  iapply wpi_trigger; simp [concH]
-  ibubble pureBy simp with [backward fupd_mask_intro]
+  unfold yield
+  ibubble simp pureBy simp
+  -- iintro HΦ
+  -- iapply wpi_trigger; simp [concH]
   -- iapply fupd_mask_intro_subseteq (by simp)
   -- iapply fupd_mask_intro_subseteq (by simp) $$ [$]
 

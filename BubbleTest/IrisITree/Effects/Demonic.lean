@@ -40,12 +40,17 @@ variable {PROP : Type _} [BI PROP] [BIFUpdate PROP] {E : Effect}
   {H : IHandler PROP E} {α : Type _}
   [sub : demonicE α -< E] [Hin : InH (demonicH (PROP := PROP) α) H]
 
+attribute [local ibubble backward 75%] wpi_trigger
+attribute [local ibubble backward 50%] fupd_mask_intro
+attribute [local simp] demonicH
+
 theorem wpi_demonic (M : CoPset) (Φ : α → Prop) [Hdec : DecidablePred Φ]
     [Hi: Inhabited {a // Φ a}] (Ψ : {a // Φ a} → PROP) :
     (∀ a, Ψ a) ⊢ WPi choose Φ @> H;M {{ Ψ }} := by
-  iintro HΨ; unfold choose
-  iapply wpi_trigger; simp [demonicH];
-  ibubble pureBy simp with [backward fupd_mask_intro]
+  unfold choose
+  ibubble simp pureBy simp
+  -- iintro HΨ;
+  -- iapply wpi_trigger; simp [demonicH]
   -- iapply fupd_mask_intro
   -- · simp
   -- iintro Hclose; iintro %a
@@ -57,16 +62,17 @@ section exec
 
 open ITree.Exec IrisITree.Core
 
-abbrev demonicEH := ITree.Effects.demonicEH
+attribute [local simp] demonicH
+attribute [local simp] demonicEH
+
 instance demonicEH_adequate {PROP : Type _} [BI PROP] [BIFUpdate PROP] {α : Type _} :
     SEHandlerAdequate (demonicH (PROP := PROP) α) (demonicEH α) where
   inv _ := iprop(emp)
   adequate := by
-    intro i s C Φ1 Φ2 Hhandle
-    simp [demonicH, demonicEH] at Hhandle ⊢
-    obtain ⟨a, s', HC⟩ := Hhandle
-    ibubble pureStop <;> try simp
+    intro i s C Φ1 Φ2 ⟨a, s', HC⟩
+    ibubble simp pureStop <;> try simp
     exact HC
+    -- simp [demonicH] at ⊢
     -- iintro HΦ1 Hinv; imodintro
     -- iexists ⟨a, s'⟩; iexists s; iframe
     -- isplitr; itrivial

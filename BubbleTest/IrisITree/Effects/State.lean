@@ -42,15 +42,20 @@ variable {PROP : Type _} [BI PROP] [BIFUpdate PROP] {S : Type _}
   {E : Effect} {H : IHandler PROP E}
   [stateE S -< E] [Hin : InH (stateH stateInterp) H]
 
+attribute [local ibubble backward 75%] wpi_trigger
+attribute [local ibubble backward 50%] fupd_mask_intro
+attribute [local simp] stateH
+
 -- Allow a mask-changing fancy update from `Ms` to `Me` while handling `get`.
 theorem wpi_stateE_get Ms Me (Φ : S → PROP) :
     (∀ s, stateInterp s ={Ms, Me}=∗ stateInterp s ∗ Φ s) -∗
     WPi StateE.get @> H; Ms, Me {{Φ}} := by
   iintro Hw; unfold StateE.get StateE.modify
   iapply wpi_trigger; simp [stateH]
-  ibubble pureBy simp with [backward fupd_mask_intro]
-  -- iapply fupd_mask_intro (by simp); iintro Hm
-  -- iintro %s Hs; imod Hm
+  iapply fupd_mask_intro (by simp); iintro Hm
+  iintro %s Hs; imod Hm
+  -- [TODO]: FIX ME!!! why explosion?
+  ibubble pureBy simp
   -- imod Hw $$ [$] with ⟨$, $⟩
   -- iapply fupd_mask_intro (by simp); iintro $
 
@@ -64,8 +69,9 @@ theorem wpi_stateE_set Ms Me s' (Φ : PUnit → PROP) :
     (∀ s, stateInterp s ={Ms, Me}=∗ stateInterp s' ∗ Φ ⟨⟩) -∗
     WPi StateE.set s' @> H; Ms, Me {{Φ}} := by
   iintro Hw; unfold StateE.set StateE.modify
-  iapply wpi_trigger_bind; simp [stateH];
-  ibubble pureBy simp with [backward fupd_mask_intro]
+  iapply wpi_trigger_bind
+  ibubble simp pureBy simp
+  -- simp [stateH];
   -- iapply fupd_mask_intro (by simp); iintro Hm
   -- iintro %s Hs; imod Hm
   -- imod Hw $$ [$] with ⟨$, _⟩
@@ -86,13 +92,16 @@ open ITree.Exec IrisITree.Core
 variable {PROP : Type _} [BI PROP] [BIFUpdate PROP]
   {S : Type _} (stateInterp : S → PROP)
 
+attribute [local simp] stateH
+attribute [local simp] stateEH
+
 instance stateEH_adequate :
     SEHandlerAdequate (stateH stateInterp) (stateEH S) where
   inv s := stateInterp s
   adequate := by
-    intro i s C Φ1 Φ2 Hhandle
-    simp [stateH, stateEH] at Hhandle ⊢
-    ibubble pureBy assumption
+    ibubble simp pureBy simp
+    -- intro i s C Φ1 Φ2 Hhandle
+    -- simp [stateH, stateEH] at Hhandle ⊢
     -- iintro Hs Hinv; imod Hs $$ [$] with ⟨_, _⟩
     -- iintro !>; iexists _, _; iframe
     -- itrivial

@@ -85,6 +85,8 @@ variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF]
 variable {Loc Val : Type} [Ord Loc] [Std.TransOrd Loc] [Std.LawfulEqOrd Loc] [DecidableEq Loc]
 variable [Gpre : heapHGpreS GF Loc Val]
 
+attribute [local simp] heap_inv heapH_inv_name stateInterp_heap pointsto
+
 -- TODO: find way to eliminate the parameter M and use the syntax sugar instead of `bigSepM`
 theorem heapH_init  (σ : heapE.T Loc Val) :
     ⊢ |={∅}=> ∃ G : heapHGS GF Loc Val,
@@ -98,9 +100,9 @@ theorem heapH_init  (σ : heapE.T Loc Val) :
   · ibubble
     -- inext; iexists σ; iassumption
   · imodintro; iexists ⟨Gpre, γ, ""⟩
-    unfold heap_inv heapH_inv_name stateInterp_heap pointsto
-    unfold heap_inv heapH_inv_name
-    ibubble
+    ibubble simp
+    -- unfold heap_inv heapH_inv_name stateInterp_heap pointsto
+    -- unfold heap_inv heapH_inv_name
     -- isplitr
     -- · iassumption
     -- isplitl [Hauth']
@@ -117,6 +119,8 @@ variable {Loc Val : Type} [Ord Loc] [Std.TransOrd Loc] [Std.LawfulEqOrd Loc]
 variable [G : heapHGS GF Loc Val]
 variable {E : Effect} {H : IHandler (IProp GF) E}
 variable [heapE Loc Val -< E] [InH (heapH (G := G)) H]
+
+attribute [local simp] Option.join_some
 
 -- Note: we can extend the following theorems to `Ms,Me` version by having `|={Ms,Me}=> Φ v`
 @[ibubble backward 75%]
@@ -149,7 +153,7 @@ theorem wpi_storeOpt M (l : Loc) (v v' : Option Val) (Φ : Option Val → IProp 
   unfold stateInterp_heap heap_inv
   iintro %σ' ⟨HauthState, -⟩
   ihave %Heq := ghost_map_auth_agree $$ HauthInv HauthState; subst σ'
-  icombine HauthInv HauthState as Hauth; rw [Qp.half_add_half (1 : Qp)]
+  icombine HauthInv HauthState as Hauth
   imod ghost_map_update v' $$ Hauth Hpt with ⟨⟨Hauth, Hauth'⟩, Hpt⟩
   imod Hclose $$ [Hauth'] with -
   · iexists Std.insert (M := (Std.ExtTreeMap Loc · compare)) σ l v'
@@ -185,9 +189,9 @@ theorem wpi_load? M (l : Loc) (v : Val) (dq : DFrac) (Φ : Option Val → IProp 
   ihave %Hlookup := ghost_map_lookup $$ Hauth Hpt
   have Hlookup : σ[l]? = some (some v) := by
     simpa [Iris.Std.get?] using Hlookup
-  rw [Hlookup]; simp only [Option.join_some]
+  -- rw [Hlookup]; simp only [Option.join_some]
 
-  ibubble
+  ibubble simp
   -- iframe; iframe Hinv
   -- imodintro; iapply wpi_pure
   -- iapply Hwand $$ [$]
@@ -195,6 +199,8 @@ theorem wpi_load? M (l : Loc) (v : Val) (dq : DFrac) (Φ : Option Val → IProp 
 section fail
 
 variable [failE -< E]
+
+attribute [local ibubble backward 75%] wpi_bind
 
 @[ibubble backward 75%]
 theorem wpi_store! M (l : Loc) (v v' : Val) (Φ : Val → IProp GF) :
@@ -205,7 +211,6 @@ theorem wpi_store! M (l : Loc) (v v' : Val) (Φ : Val → IProp GF) :
   unfold store!
   ibubble
   -- iintro %Hmask Hpt Hwand;
-  -- iapply wpi_bind; iapply wpi_store? _ _ _ _ _ Hmask $$ Hpt
   -- iintro Hpt; iapply wpi_pure; iapply Hwand $$ [$]
 
 @[ibubble backward 75%]
@@ -233,6 +238,7 @@ class LawfulLoc (Loc : Type) [Ord Loc] extends Zero Loc, HAdd Loc Int Loc where
     ¬(compare (l + (1 : Int) + (m : Int)) l).isLE = true
 
 attribute [reducible, instance] LawfulLoc.decEq
+attribute [simp] LawfulLoc.add_zero
 
 theorem extTreeMap_insertMany_eq_ofList_union {K : Type _} {V : Type _}
     [Ord K] [Std.TransOrd K] [Std.LawfulEqOrd K] [DecidableEq K]
@@ -268,6 +274,8 @@ section alloc
 variable [demonicE Loc -< E] [InH (demonicH (PROP := IProp GF) Loc) H]
 variable [LawfulLoc Loc]
 
+attribute [local simp] pointsto
+
 @[ibubble backward 75%]
 theorem wpi_allocN M (n : Nat) (v : Val) (Φ : Loc → IProp GF) :
     ↑(heapH_inv_name (G := G)) ⊆ M →
@@ -288,7 +296,7 @@ theorem wpi_allocN M (n : Nat) (v : Val) (Φ : Loc → IProp GF) :
   unfold stateInterp_heap heap_inv
   iintro %σ' ⟨Hauth', -⟩
   ihave %Heq := ghost_map_auth_agree $$ HauthInv Hauth'; subst σ'
-  icombine HauthInv Hauth' as Hauth; rw [Qp.half_add_half (1 : Qp)]
+  icombine HauthInv Hauth' as Hauth;
 
   -- We do not need to care about the orders
   let entries := (List.range n).map λ m => (l + Int.ofNat m, some v)
@@ -299,13 +307,18 @@ theorem wpi_allocN M (n : Nat) (v : Val) (Φ : Loc → IProp GF) :
   have Hnodup : Std.NoDupKeys entries := by
     unfold Iris.Std.NoDupKeys entries
     simp [List.map_map]
-    exact Iris.Std.List.nodup_map_of_injective
+    exact List.nodup_map_of_injective
       (LawfulLoc.add_nat_inj l) List.nodup_range
   have HinsertMany : σ.insertMany entries = σsum := by
     simpa only [σnew] using extTreeMap_insertMany_eq_ofList_union σ entries Hnodup
   have HinsertMany' :
       σ.insertMany ((List.range n).map fun (i : Nat) => (l + (i : Int), some v)) = σsum := by
     simpa [entries, σsum] using HinsertMany
+  have HbigSepMap := equiv_iff.mp (BigSepL.bigSepL_map
+    (l := List.range n)
+    (Φ := λ (_ : Nat) (kv : Loc × Option Val) =>
+      ghost_map_elem (GF := GF) G.heapH_heap_name (DFrac.own 1) kv.1 kv.2)
+    (l + Int.ofNat ·, some v))
 
   imod ghost_map_insert_big σnew $$ Hauth with ⟨Hauth, Hpts⟩
   · -- Prove σnew ##ₘ σ
@@ -320,28 +333,28 @@ theorem wpi_allocN M (n : Nat) (v : Val) (Φ : Loc → IProp GF) :
     simpa [Iris.Std.get?] using Hk.2
   icases Hauth with ⟨HauthInv, HauthState⟩
   imod Hclose $$ [HauthInv] with -
-  · iexists σ.insertMany entries;
-    rw [HinsertMany]; iassumption
-  imodintro; isplitl [HauthState]
-  · rw [HinsertMany']; iframe; iframe Hinv
-  unfold pointsto
-  iapply wpi_pure; iapply Hwand
-  iapply (equiv_iff.mp (BigSepL.bigSepL_map
-    (Φ := λ _ kv => ghost_map_elem _ _ kv.1 kv.2)
-    (l + Int.ofNat ·, some v)))
-  iapply (BigSepM.bigSepM_ofList (M := (Std.ExtTreeMap Loc · compare))) $$ Hpts
-  exact Hnodup
+    <;> ibubble simp with [backward BigSepM.bigSepM_ofList]
+  -- · iexists σ.insertMany entries;
+  --   rw [HinsertMany]; iassumption
+  -- imodintro; isplitl [HauthState]
+  -- · rw [HinsertMany']; iframe; iframe Hinv
+  -- unfold pointsto
+  -- iapply wpi_pure; iapply Hwand
+  -- iapply HbigSepMap
+  -- iapply (BigSepM.bigSepM_ofList (M := (Std.ExtTreeMap Loc · compare))) $$ Hpts
+  -- exact Hnodup
 
 @[ibubble backward 75%]
 theorem wpi_alloc M (v : Val) (Φ : Loc → IProp GF) :
     ↑(heapH_inv_name (G := G)) ⊆ M →
     (∀ l, l ↦ v -∗ Φ l) -∗
     WPi (alloc v LawfulLoc.add_pos_nle) @> H; M {{ Φ }} := by
-  iintro %Hmask Hwand; unfold alloc
-  iapply wpi_allocN M 1 v Φ Hmask
-  iintro %l Hpts; simp; icases Hpts with ⟨Hpt, -⟩
-  rw [LawfulLoc.add_zero l]
-  iapply Hwand $$ [$]
+  unfold alloc
+  ibubble simp
+  -- iintro %Hmask Hwand
+  -- iapply wpi_allocN M 1 v Φ Hmask
+  -- iintro %l Hpts; simp; icases Hpts with ⟨Hpt, -⟩
+  -- iapply Hwand $$ [$]
 
 end alloc
 

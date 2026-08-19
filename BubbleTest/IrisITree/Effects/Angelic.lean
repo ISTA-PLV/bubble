@@ -42,14 +42,19 @@ variable {PROP : Type _} [BI PROP] [BIFUpdate PROP] {E : Effect}
   {H : IHandler PROP E} {α : Type _}
   [sub : angelicE α -< E] [Hin : InH (angelicH (PROP := PROP) α) H]
 
+attribute [local ibubble backward 75%] wpi_trigger
+attribute [local ibubble backward 50%] fupd_mask_intro
+attribute [local simp] angelicH
+
 theorem wpi_angelic (M : CoPset) (p : α → Prop) (a : {x // p x}) (Ψ : {x // p x} → PROP) :
     Ψ a ⊢ (WPi (choose_angelic p) @> H; M {{ Ψ }}) := by
-  iintro HΨ; unfold choose_angelic
-  iapply wpi_trigger; simp [angelicH]
-  ibubble simp pureBy simp with [backward fupd_mask_intro]
+  unfold choose_angelic
+  ibubble simp pureBy simp
+  -- iintro HΨ
+  -- iapply wpi_trigger; simp [angelicH]
   -- iapply fupd_mask_intro
   -- · simp
-  -- iintro Hfalse; simp [angelicH]; iexists a
+  -- iintro Hfalse; iexists a
   -- imod Hfalse; imodintro; iexact HΨ
 
 end wpi_rules
@@ -58,15 +63,18 @@ section exec
 
 open ITree.Exec IrisITree.Core
 
+attribute [local simp] angelicH
+attribute [local simp] angelicEH
+
 instance angelicEH_adequate {PROP : Type _} [BI PROP] [BIFUpdate PROP] {α : Type _} :
     SEHandlerAdequate (angelicH (PROP := PROP) α) (angelicEH α) where
   inv _ := iprop(emp)
   adequate := by
-    intro i s C Φ1 Φ2 Hhandle
-    simp [angelicH, angelicEH] at Hhandle ⊢
-    ibubble simp pureStop
-    · simp
-    · apply Hhandle
-    -- iintro ⟨%a, HΦ⟩ Hinv !>; iexists a, s; iframe; itrivial
+    ibubble simp pureBy simp_all
+    -- intro i s C Φ1 Φ2 Hhandle
+    -- simp [angelicH, angelicEH] at Hhandle ⊢
+    -- iexists a, s
+    -- iframe
+    -- itrivial
 
 end exec

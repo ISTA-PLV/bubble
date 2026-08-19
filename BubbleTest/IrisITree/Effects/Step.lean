@@ -52,9 +52,9 @@ theorem map (m : StepMod PROP) (P Q : PROP) :
 
 theorem wand (m : StepMod PROP) (P Q : PROP) :
     ⊢@{PROP} m iprop(P -∗ Q) -∗ P -∗ m Q := by
-  iintro Hwand HP
-  iapply m.map $$ Hwand
-  ibubble
+  ibubble with [backward map 25%]
+  -- iintro Hwand HP
+  -- iapply m.map $$ Hwand
   -- iintro HPQ
   -- iapply HPQ $$ HP
 
@@ -64,13 +64,13 @@ end StepMod
 def stepH (m : StepMod PROP) : IHandler PROP stepE where
   ihandle := λ _ Φ _ => m (Φ ⟨⟩)
   ihandle_mono := by
-    iintro %_ %Φ %Φ' %_ %_ HΦwand _ HΦ
-    ispecialize HΦwand $$ %⟨⟩
-    iapply m.map $$ HΦ HΦwand
+    ibubble with [backward StepMod.map 25%]
+    -- iintro %_ %Φ %Φ' %_ %_ HΦwand _ HΦ
+    -- ispecialize HΦwand $$ %⟨⟩
+    -- iapply m.map $$ HΦ HΦwand
 
 instance stepH_sequential (m : StepMod PROP) : Sequential (stepH m) := by
-  constructor
-  simp only [stepH]
+  constructor; unfold stepH
   ibubble
   -- iintro %_ %_ %_ H
   -- iexact H
@@ -91,15 +91,19 @@ variable {PROP : Type _} [BI PROP] [BIFUpdate PROP]
   {m : StepMod PROP}
   [sub : stepE -< E] [Hin : InH (stepH m) H]
 
+attribute [local ibubble backward 75%] wpi_trigger
+attribute [local ibubble backward 50%] fupd_mask_intro
+attribute [local ibubble backward 25%] StepMod.map
+attribute [local simp] stepH
+
 @[ibubble backward 75%]
 theorem wpi_step M (Φ : PUnit → PROP) :
     m iprop(|={M}=> Φ ⟨⟩) -∗
     WPi step @> H; M {{ Φ }} := by
   change m iprop(|={M}=> Φ ⟨⟩) -∗
     WPi (@Effect.trigger stepE E sub ⟨⟩) @> H; M {{ Φ }}
-  iintro HΦ; iapply wpi_trigger; simp only [stepH]
   ibubble simp pureBy simp
-    with [backward StepMod.map 10%, backward fupd_mask_intro]
+  -- iintro HΦ; iapply wpi_trigger; simp only [stepH]
   -- iapply fupd_mask_intro (by simp)
   -- iintro Hclose; iapply m.map $$ HΦ
   -- iintro HΦ; imod Hclose; imod HΦ
@@ -113,15 +117,21 @@ open ITree.Exec
 
 variable {GF : BundledGFunctors} [InvGS GF]
 
+attribute [local simp] stepH
+attribute [local simp] stepEH
+attribute [local simp] Nat.zero_le
+
 /-- Executing an identity-interpreted step requires no later credits. -/
 instance stepEH_ident_adequate :
     SEHandlerAdequate (stepH (.ident (PROP := IProp GF))) (stepEH (λ _ => 0)) where
   inv _ := iprop(True)
   adequate := by
-    intro i s C Φ₁ Φ₂ Hhandle
-    simp only [stepH, stepEH] at *
-    simp only [Nat.zero_le, true_and, Nat.sub_zero] at Hhandle
-    ibubble simp
+    ibubble simp pureStop
+    · simp
+    · exact x
+    -- intro i s C Φ₁ Φ₂ Hhandle
+    -- simp only [stepH, stepEH] at *
+    -- simp [Nat.zero_le] at Hhandle
     -- iintro HΦ _ !>
     -- iexists ⟨⟩, (ULift.up (s.1.down + 1), ULift.up s.2.down)
     -- iframe; itrivial
