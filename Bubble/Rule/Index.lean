@@ -18,13 +18,13 @@ private def builtinRule (name : Name) (kind : RuleBuilderKind)
   info := .ofBuilder (.tactic descr) probability
 
 def identityRule : Rule RuleInfo :=
-  builtinRule `identity .forward .identity .almost
+  builtinRule `identity .forward .identity .medium
 
 def applyHypsRule : Rule RuleInfo :=
   builtinRule `applyHyps .apply .applyHyps .high
 
 def haveHypsRule : Rule RuleInfo :=
-  builtinRule `haveHyps .forward .haveHyps .almost
+  builtinRule `haveHyps .forward .haveHyps .medium
 
 def icasesRule : Rule RuleInfo :=
   builtinRule `icases .forward .icases .almost
