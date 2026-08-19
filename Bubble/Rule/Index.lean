@@ -48,7 +48,7 @@ def imodIntroRule : Rule RuleInfo :=
   builtinRule `imodIntro .apply .imodIntro .medium
 
 def imodRule : Rule RuleInfo :=
-  builtinRule `imod .apply .imod .high
+  builtinRule `imod .apply .imod .low
 
 def isplitRule : Rule RuleInfo :=
   builtinRule `isplit .apply .isplit .almost
