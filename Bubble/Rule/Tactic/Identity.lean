@@ -14,6 +14,16 @@ def run (input : RuleInput) : Lean.Elab.Tactic.TacticM RuleOutput := do
   input.goal.withContext do
     let some irisGoal ← Tactic.irisGoal? input.goal | return RuleOutput.ofSpecs #[]
     let { prop, goal := target, .. } := irisGoal
+    /- When both views exist, `FromAnd` gives `isplit` a shared-context
+    decomposition and dominates this linear `FromSep` decomposition. -/
+    let beforeAndProbe ← Meta.saveState
+    let andLeft ← mkFreshExprMVarQ prop
+    let andRight ← mkFreshExprMVarQ prop
+    match ← Tactic.trySynthInstanceProbeQ q(FromAnd $target $andLeft $andRight) with
+    | .some _ =>
+        beforeAndProbe.restore
+        return RuleOutput.ofSpecs #[]
+    | .none | .undef => beforeAndProbe.restore
     let left ← mkFreshExprMVarQ prop
     let right ← mkFreshExprMVarQ prop
     let .some _ ← Tactic.trySynthInstanceProbeQ q(FromSep $target $left $right)
