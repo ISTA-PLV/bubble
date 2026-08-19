@@ -11,7 +11,7 @@ public import ITree.Exec
 
 open Iris BI ITree
 
-/-
+/--
   An [IHandler] is the user-specified recipe used to define a custom
   weakest precondition [WPi]. It specifies how to interpret an effect
   logically, given weakest preconditions for continuations of the itree.
@@ -42,7 +42,7 @@ instance {PROP E} [BI PROP] (H : IHandler PROP E) (i : E.I) :
       iprop(∃ (Φ' s' : E.O i → PROP),
         (∀ a, Φ' a -∗ Φ a) ∗ □ (∀ a, s' a -∗ s a) ∗ H.ihandle i Φ' s') := by
     apply BIBase.BiEntails.to_eq
-    ibubble?
+    ibubble
     -- isplit
     -- · iintro Hwand; iexists Φ, s; isplitr;
     --   · iintro %a H; iexact H
@@ -60,7 +60,7 @@ section handler_sumH
 
 variable {E₁ E₂} {PROP : Type _} [BI PROP] (H₁ : IHandler PROP E₁) (H₂ : IHandler PROP E₂)
 
--- An [IHandler] for sum events [E₁ ⊕ₑ E₂] delegating to respective [IHandler]s.
+/-- An [IHandler] for sum events [E₁ ⊕ₑ E₂] delegating to respective [IHandler]s. -/
 def sumH : IHandler PROP (E₁ ⊕ₑ E₂) where
   ihandle := by
     intro e Φ s
@@ -68,10 +68,12 @@ def sumH : IHandler PROP (E₁ ⊕ₑ E₂) where
     | inl e1 => exact H₁.ihandle e1 Φ s
     | inr e2 => exact H₂.ihandle e2 Φ s
   ihandle_mono := by
-    iintro %e %Φ %Φ' %s %s' HΦwand #Hswand HH
+    intro e Φ Φ' s s'
     cases e with
-    | inl e1 => iapply H₁.ihandle_mono $$ HΦwand Hswand HH
-    | inr e2 => iapply H₂.ihandle_mono $$ HΦwand Hswand HH
+    | inl e1 => ibubble
+    -- iintro HΦwand Hswand HH; iapply H₁.ihandle_mono $$ HΦwand Hswand HH
+    | inr e2 => ibubble
+    -- iintro HΦwand Hswand HH; iapply H₂.ihandle_mono $$ HΦwand Hswand HH
 infixr:30 " ⊕ₕ " => sumH
 
 @[simp]
@@ -86,7 +88,7 @@ section handler_InH
 
 variable {PROP : Type _} [BI PROP]
 
-/- `InH H1 H2` means that, on events [E1], [H1] is equivalent to [H2] -/
+/-- `InH H1 H2` means that, on events [E1], [H1] is equivalent to [H2] -/
 class InH {E₁ E₂} [Hsub : E₁ -< E₂]
     (H1 : outParam (IHandler PROP E₁)) (H2 : IHandler PROP E₂) where
   is_inH : ∀ (i₁ : E₁.I) (Φ₁ s₁ : E₁.O i₁ → PROP),
@@ -120,7 +122,7 @@ end handler_InH
 
 section handler_WandH
 
-/- `[WandH H1 H2]` means that `H1` implies `H2` -/
+/-- `[WandH H1 H2]` means that `H1` implies `H2` -/
 class WandH {PROP E} [BI PROP] (H1 : IHandler PROP E) (H2 : IHandler PROP E) where
   is_wandH : ∀ (i : E.I) (Φ s : E.O i → PROP),
     ⊢ H1.ihandle i Φ s -∗ H2.ihandle i Φ s
@@ -148,7 +150,7 @@ end handler_WandH
 
 section handler_Sequential
 
-/- `Sequential` handlers ignore the spawning continuation and do not model concurrency. -/
+/-- `Sequential` handlers ignore the spawning continuation and do not model concurrency. -/
 class Sequential {PROP} [BI PROP] {E : Effect} (H : IHandler PROP E) where
   is_seq : ∀ (i : E.I) (Φ s : E.O i → PROP),
     ⊢ H.ihandle i Φ s -∗ H.ihandle i Φ (fun _ => iprop(⌜False⌝))
