@@ -106,6 +106,48 @@ private def classifyGoals (goals : Array MVarId) :
     if irisGoal?.isSome then return (iris.push goal, lean)
     return (iris, lean.push goal)
 
+/--
+  Solve an auxiliary term metavariable only when no other open goal refers to it.
+  This preserves witnesses that must be inferred by a later Iris subgoal while
+  allowing irrelevant witnesses to be recovered from the local Lean context.
+-/
+private def solveIndependentAuxGoals (irisGoals otherGoals : Array MVarId) :
+    ReplayM (Array MVarId) := do
+  let allGoals := irisGoals ++ otherGoals
+  let mut remaining := #[]
+  for goal in otherGoals do
+    if ← goal.isAssignedOrDelayedAssigned then continue
+    let isPure ← goal.withContext do
+      isProp (← instantiateMVars (← goal.getType))
+    if isPure then
+      remaining := remaining.push goal
+      continue
+    let referenced ← allGoals.anyM λ other => do
+      if other == goal || (← other.isAssignedOrDelayedAssigned) then return false
+      return (← other.withContext other.getMVarDependencies).contains goal
+    if referenced then
+      remaining := remaining.push goal
+      continue
+    let preState ← liftM (m := MetaM) saveState
+    let tactic ← `(tactic| assumption)
+    let solved ← try
+      let generated ← withSuppressedMessages <| evalTacticAt tactic goal
+      let generated ← ReplayM.openGoals generated.toArray
+      if (← goal.isAssignedOrDelayedAssigned) && generated.isEmpty then
+        let postState ← liftM (m := MetaM) saveState
+        ReplayM.appendScript #[{
+          preState, preGoal := goal, tactic, postState, postGoals := generated
+        }]
+        pure true
+      else
+        preState.restore
+        pure false
+    catch _ =>
+      preState.restore
+      pure false
+    unless solved do remaining := remaining.push goal
+  return remaining
+
 /-- Discharge replay-generated pure Lean goals with the configured solver. -/
 private def solvePureGoals (goals : Array MVarId) : ReplayM (Array MVarId) := do
   let config ← ReplayM.getConfig
@@ -153,6 +195,7 @@ def replayRuleApplication (focus : MVarId) (goal : Goal) (rappRef : RappRef)
     preState, preGoal := normalizedFocus, tactic, postState, postGoals := generated
   }]
   let (irisGoals, leanGoals) ← classifyGoals generated
+  let leanGoals ← solveIndependentAuxGoals irisGoals leanGoals
   let leanGoals ← solvePureGoals leanGoals
   if irisGoals.size != expectedChildren then
     throwError "ibubble: replay of Rapp {rapp.id} produced {irisGoals.size} Iris goals, expected {expectedChildren}"

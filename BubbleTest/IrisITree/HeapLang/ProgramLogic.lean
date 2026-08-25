@@ -466,9 +466,9 @@ theorem wp_cmpXchg_fail {M : CoPset} (l : Loc) (dq : DFrac) (v' v₁ v₂ : Val)
   simp only [wp_unfold, Exp.denote.eq_18, Exp.isVal, Exp.denote.eq_1]
   ibubble simp pureBy simp [*] without [backward wpi_wand]
   -- iintro %Hmask %Hneq %Hcmp Hpt HΦ
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; simp only [Val.loc!]; iapply wp_val
+  -- iapply wpi_bind; simp only [←reduceIte]; iapply wpi_pure
+  -- iapply wpi_bind; iapply wpi_pure
+  -- iapply wpi_bind; simp only [Val.loc!]; iapply wpi_pure
   -- iapply wpi_bind; simp only
   -- iapply wpi_pure; iapply wpi_bind
   -- iapply wpi_load! _ _ _ _ _ Hmask $$ Hpt
