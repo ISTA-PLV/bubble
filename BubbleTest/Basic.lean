@@ -176,8 +176,8 @@ structure BackwardEquivWitness [BI PROP] (P : PROP) : Prop where
 theorem backward_bientails_with_pure [BI PROP] {P : PROP}
     (h : BackwardEquivWitness P) : iprop(P ∧ True) ⊣⊢ P := h.equiv
 
-example [BI PROP] (P : PROP) (h : BackwardEquivWitness P) : iprop(P ∧ True) ⊢ P := by
-  ibubble pureBy assumption with [backward backward_bientails_with_pure]
+example [BI PROP] (P : PROP) : iprop(P ∧ True) ⊢ P := by
+  ibubble with [backward backward_bientails_with_pure]
 
 example [BI PROP] (P : PROP) (h : BackwardEquivWitness P) : P ⊢ iprop(P ∧ True) := by
   set_option trace.ibubble.ruleIndex true in

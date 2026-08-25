@@ -85,38 +85,6 @@ def UnOp.denote (op : UnOp) (v : Val) : ITree heaplangE Val :=
   | .minus, .lit (.int n) => return .lit (.int (-n))
   | _, _ => fail "UnOp: type mismatch"
 
-def BinOp.evalInt (op : BinOp) (n₁ n₂ : Int) : Option BaseLit :=
-  match op with
-  | .plus => some $ .int (n₁ + n₂)
-  | .minus => some $ .int (n₁ - n₂)
-  | .mult => some $ .int (n₁ * n₂)
-  | .tdiv => some $ .int (Int.tdiv n₁ n₂)
-  | .tmod => some $ .int (Int.tmod n₁ n₂)
-  | .and => some $ .int (n₁ &&& n₂)
-  | .or => some $ .int (n₁ ||| n₂)
-  | .xor => some $ .int (n₁ ^^^ n₂)
-  | .shiftl => some $ .int (n₁ <<< n₂)
-  | .shiftr => some $ .int (n₁ >>> n₂)
-  | .le => some $ .bool (decide (n₁ ≤ n₂))
-  | .lt => some $ .bool (decide (n₁ < n₂))
-  | .eq => some $ .bool (decide (n₁ = n₂))
-  | .offset => none
-
-def BinOp.evalBool (op : BinOp) (b₁ b₂ : Bool) : Option BaseLit :=
-  match op with
-  | .and => some $ .bool (b₁ && b₂)
-  | .or => some $ .bool (b₁ || b₂)
-  | .xor => some $ .bool (Bool.xor b₁ b₂)
-  | .eq => some $ .bool (decide (b₁ = b₂))
-  | _ => none
-
-def BinOp.evalLoc (op : BinOp) (l₁ : Loc) (v₂ : BaseLit) : Option BaseLit :=
-  match op, v₂ with
-  | .offset, .int off => some $ .loc (l₁ + off)
-  | .le, .loc l₂ => some $ .bool (decide (l₁.n ≤ l₂.n))
-  | .lt, .loc l₂ => some $ .bool (decide (l₁.n < l₂.n))
-  | _, _ => none
-
 def BinOp.denote (op : BinOp) (v₁ v₂ : Val) : ITree heaplangE Val :=
   if op == .eq then
     if Val.compareSafe v₁ v₂ then
