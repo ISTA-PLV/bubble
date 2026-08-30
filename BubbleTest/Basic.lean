@@ -64,6 +64,9 @@ example [BI PROP] (P : PROP) : P ⊢ P := by
   ibubble breadthFirst simp
 
 example [BI PROP] (P : PROP) : P ⊢ P := by
+  ibubble maxDepth 200
+
+example [BI PROP] (P : PROP) : P ⊢ P := by
   -- ibubble
   ibubble
 

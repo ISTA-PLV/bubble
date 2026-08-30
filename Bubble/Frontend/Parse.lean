@@ -38,6 +38,16 @@ private meta def parseTheoremLimit (stx : Syntax) : TermElabM Nat := do
       return limit
   | _ => throwUnsupportedSyntax
 
+private meta def parseDepthLimit (stx : Syntax) : TermElabM Nat := do
+  match stx with
+  | `(ibubbleDepthLimit| maxDepth $limit:num) =>
+      let some limit := limit.raw.isNatLit?
+        | throwError "ibubble: expected a numeral search-depth limit"
+      if limit == 0 then
+        throwError "ibubble: maxDepth must be positive"
+      return limit
+  | _ => throwUnsupportedSyntax
+
 private meta def parseSuccessProbability (p : Syntax) : TermElabM Percent := do
   let some p := p.isNatLit?
     | throwError "ibubble: expected a numeral success probability for local rule"
@@ -101,6 +111,7 @@ private meta def mkConfig (generateScript? : Bool)
     (normModeStx? : Option (TSyntax `ibubbleNormMode))
     (pureSolverStx? : Option (TSyntax `ibubblePureSolver))
     (theoremLimitStx? : Option (TSyntax `ibubbleTheoremLimit))
+    (depthLimitStx? : Option (TSyntax `ibubbleDepthLimit))
     (ruleEdits : Array (TSyntax `ibubbleRuleEdit)) : TermElabM SearchConfig := do
   let strategy ← match strategyStx? with
     | none => pure .bestFirst
@@ -114,6 +125,9 @@ private meta def mkConfig (generateScript? : Bool)
   let theoremUseLimit ← match theoremLimitStx? with
     | none => pure defaultMaxTheoremUses
     | some theoremLimitStx => parseTheoremLimit theoremLimitStx
+  let depthLimit ← match depthLimitStx? with
+    | none => pure ({} : SearchConfig).maxDepth
+    | some depthLimitStx => parseDepthLimit depthLimitStx
   let localTheoremRules ← parseRuleEdits ruleEdits
   return {
     generateScript?
@@ -122,6 +136,7 @@ private meta def mkConfig (generateScript? : Bool)
     pureSolver
     pureStop?
     «maxTheoremUses» := theoremUseLimit
+    «maxDepth» := depthLimit
     localTheoremRules
   }
 
@@ -132,13 +147,15 @@ meta def parse (stx : Syntax) : TermElabM SearchConfig := do
     | `(tactic| ibubble $[$strategy:ibubbleStrategy]? $[$normMode:ibubbleNormMode]?
         $[$pureSolver:ibubblePureSolver]?
         $[$theoremLimit:ibubbleTheoremLimit]?
+        $[$depthLimit:ibubbleDepthLimit]?
         $[$ruleEdits:ibubbleRuleEdit]*) =>
-        mkConfig false strategy normMode pureSolver theoremLimit ruleEdits
+        mkConfig false strategy normMode pureSolver theoremLimit depthLimit ruleEdits
     | `(tactic| ibubble? $[$strategy:ibubbleStrategy]? $[$normMode:ibubbleNormMode]?
         $[$pureSolver:ibubblePureSolver]?
         $[$theoremLimit:ibubbleTheoremLimit]?
+        $[$depthLimit:ibubbleDepthLimit]?
         $[$ruleEdits:ibubbleRuleEdit]*) =>
-        mkConfig true strategy normMode pureSolver theoremLimit ruleEdits
+        mkConfig true strategy normMode pureSolver theoremLimit depthLimit ruleEdits
     | _ =>
         throwUnsupportedSyntax
 

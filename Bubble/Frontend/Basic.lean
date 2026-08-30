@@ -23,6 +23,10 @@ syntax "pureStop" : ibubblePureSolver
 declare_syntax_cat ibubbleTheoremLimit
 syntax "maxTheoremUses" ppSpace num : ibubbleTheoremLimit
 
+/- Bound search depth and, consequently, the normalization steps available to a goal. -/
+declare_syntax_cat ibubbleDepthLimit
+syntax "maxDepth" ppSpace num : ibubbleDepthLimit
+
 /- Local rule edits for one `ibubble` invocation. -/
 declare_syntax_cat ibubbleRuleDirection
 syntax "backward" : ibubbleRuleDirection
@@ -41,10 +45,12 @@ syntax "without" "[" ibubbleErasedRule,* "]" : ibubbleRuleEdit
 syntax (name := ibubbleTactic)  "ibubble"
   (ppSpace ibubbleStrategy)? (ppSpace ibubbleNormMode)?
   (ppSpace ibubblePureSolver)? (ppSpace ibubbleTheoremLimit)?
+  (ppSpace ibubbleDepthLimit)?
   (ppSpace ibubbleRuleEdit)* : tactic
 syntax (name := ibubbleTactic?) "ibubble?"
   (ppSpace ibubbleStrategy)? (ppSpace ibubbleNormMode)?
   (ppSpace ibubblePureSolver)? (ppSpace ibubbleTheoremLimit)?
+  (ppSpace ibubbleDepthLimit)?
   (ppSpace ibubbleRuleEdit)* : tactic
 
 end Bubble
