@@ -5,7 +5,7 @@ Usage:
     uv run --with matplotlib --with numpy plot.py [--out FIG.pdf] <dir> [<dir> ...]
 
 Reads every results.jsonl under the given directories (all seeds, one density).
-Produces a two-panel figure:
+Produces a runtime figure, plus a timeout panel when timeouts are present:
   top    - runtime vs. propositions (log scale): median with interquartile band,
            p90, mean with a bootstrap 95% CI, and the per-case scatter;
   bottom - fraction of instances that hit the heartbeat / process limit.
@@ -89,9 +89,14 @@ def main() -> int:
         }
 
     x = np.array(sizes)
-    fig, (ax, ax_to) = plt.subplots(
-        2, 1, figsize=(7.5, 6.5), sharex=True,
-        gridspec_kw={"height_ratios": [3.2, 1], "hspace": 0.08})
+    has_timeouts = any(not stats[size]["ok"].all() for size in sizes)
+    if has_timeouts:
+        fig, (ax, ax_to) = plt.subplots(
+            2, 1, figsize=(7.5, 6.5), sharex=True,
+            gridspec_kw={"height_ratios": [3.2, 1], "hspace": 0.08})
+    else:
+        fig, ax = plt.subplots(figsize=(7.5, 5.1))
+        ax_to = None
 
     # Scatter of every case; successes filled, timeouts open.
     rng = np.random.default_rng(1)
@@ -126,17 +131,22 @@ def main() -> int:
     n_label = f"{n_seeds[0]}" if len(n_seeds) == 1 else f"{n_seeds[0]}–{n_seeds[-1]}"
     ax.set_title(f"{args.title}\n{n_label} random instances per size (density 0.2)", fontsize=10.5)
     ax.legend(loc="upper left", fontsize=8.5, frameon=False)
-    ax.text(0.99, 0.02, "open red markers: timed out (heartbeat / process limit);\n"
-            "their abort time is a lower bound and is included in all statistics",
-            transform=ax.transAxes, ha="right", va="bottom", fontsize=7.5, color="#c0392b")
+    if has_timeouts:
+        ax.text(0.99, 0.02, "open red markers: timed out (heartbeat / process limit);\n"
+                "their abort time is a lower bound and is included in all statistics",
+                transform=ax.transAxes, ha="right", va="bottom", fontsize=7.5,
+                color="#c0392b")
 
-    timeout_rate = np.array([stats[s]["timeout_rate"] for s in sizes]) * 100
-    ax_to.bar(x, timeout_rate, width=1.4, color="#c0392b", alpha=0.75)
-    ax_to.set_ylabel("timed out (%)")
-    ax_to.set_ylim(0, max(5, timeout_rate.max() * 1.15))
-    ax_to.set_xlabel("propositions (P and Q atoms)")
-    ax_to.grid(True, axis="y", alpha=0.3)
-    ax_to.set_xticks(x if len(x) <= 25 else x[::2])
+        timeout_rate = np.array([stats[s]["timeout_rate"] for s in sizes]) * 100
+        ax_to.bar(x, timeout_rate, width=1.4, color="#c0392b", alpha=0.75)
+        ax_to.set_ylabel("timed out (%)")
+        ax_to.set_ylim(0, max(5, timeout_rate.max() * 1.15))
+        ax_to.set_xlabel("propositions (P and Q atoms)")
+        ax_to.grid(True, axis="y", alpha=0.3)
+        ax_to.set_xticks(x if len(x) <= 25 else x[::2])
+    else:
+        ax.set_xlabel("propositions (P and Q atoms)")
+        ax.set_xticks(x if len(x) <= 25 else x[::2])
 
     for suffix in {args.out.suffix or ".pdf", ".png"}:
         target = args.out.with_suffix(suffix)

@@ -1,0 +1,14 @@
+file,runs,invocations_per_run,average_total_ms,min_total_ms,max_total_ms
+BubbleTest/IrisITree/Core/Exec.lean,5,22,3941.965850,3894.817541,4031.375126
+BubbleTest/IrisITree/Core/Handler.lean,5,9,1572.350275,1557.896459,1581.804666
+BubbleTest/IrisITree/Core/Wpi.lean,5,55,22963.904526,22609.370962,23580.968749
+BubbleTest/IrisITree/Core/WpiExec.lean,5,14,5869.571117,5496.236210,6368.854292
+BubbleTest/IrisITree/Effects/Angelic.lean,5,4,764.669259,746.104208,806.757959
+BubbleTest/IrisITree/Effects/Conc.lean,5,9,10668.552700,10328.872165,10965.835000
+BubbleTest/IrisITree/Effects/Demonic.lean,5,4,666.982567,658.148249,675.628168
+BubbleTest/IrisITree/Effects/Fail.lean,5,4,112.952376,111.423168,113.843084
+BubbleTest/IrisITree/Effects/Halt.lean,5,5,196.671366,194.429375,201.357917
+BubbleTest/IrisITree/Effects/Heap.lean,5,12,8290.771400,8222.509332,8397.098083
+BubbleTest/IrisITree/Effects/State.lean,5,5,13025.789659,11793.753082,16861.959666
+BubbleTest/IrisITree/Effects/Step.lean,5,9,1965.684367,1776.424335,2347.949251
+BubbleTest/IrisITree/HeapLang/ProgramLogic.lean,5,76,23554.932661,23280.615422,23961.695957
