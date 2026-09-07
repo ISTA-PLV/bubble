@@ -27,7 +27,7 @@ attribute [local simp] bi_close
 
 theorem bi_close_mono (P1 P2 : α → PROP) (a : α) :
     bi_close R P1 a ⊢ (∀ y, P1 y -∗ P2 y) -∗ bi_close R P2 a := by
-  ibubble simp
+  ibubble
   -- simp [bi_close]
   -- iintro Hclose Hwand;
   -- icases Hclose with ⟨%a', %HR, HP1⟩
@@ -37,7 +37,7 @@ theorem bi_close_mono (P1 P2 : α → PROP) (a : α) :
 
 theorem bi_close_intro (P : α → PROP) (a : α) [Href : Std.Refl R] :
     P a ⊢ bi_close R P a := by
-  ibubble simp pureBy exact Href.refl _
+  ibubble pureBy exact Href.refl _
   -- simp [bi_close]
   -- iintro HP
   -- iexists a; isplitr
@@ -46,7 +46,7 @@ theorem bi_close_intro (P : α → PROP) (a : α) [Href : Std.Refl R] :
 
 theorem bi_close_respect (P : α → PROP) [Hsym : Symm R] [Htran : Trans R R R] :
     ∀ {x y : α}, R x y → bi_close R P x ⊣⊢ bi_close R P y := by
-  ibubble simp pureStop
+  ibubble pureStop
   · exact Htran.trans (Hsym.symm _ _ x) H1_5
   · exact Htran.trans x H1_5
   -- simp only [bi_close]
@@ -74,7 +74,7 @@ attribute [local simp] bi_mono0
 
 theorem bi_mono0_intro0 (P : (α → PROP) → PROP) (Q : α → PROP) :
     P Q ⊢ bi_mono0 P Q := by
-  ibubble simp
+  ibubble
   -- simp only [bi_mono0]
   -- iintro HP
   -- iexists Q; isplitl [HP]
@@ -84,7 +84,7 @@ theorem bi_mono0_intro0 (P : (α → PROP) → PROP) (Q : α → PROP) :
 @[ibubble backward 70%]
 theorem bi_mono0_mono (P : (α → PROP) → PROP) (Q1 Q2 : α → PROP) :
     bi_mono0 P Q1 ⊢ (∀ x, Q1 x -∗ Q2 x) -∗ bi_mono0 P Q2 := by
-  ibubble simp
+  ibubble
   -- simp only [bi_mono0]
   -- iintro Hm HQ
   -- icases Hm with ⟨%Q', HP, HQ1⟩
@@ -94,7 +94,7 @@ theorem bi_mono0_mono (P : (α → PROP) → PROP) (Q1 Q2 : α → PROP) :
 
 theorem bi_mono0_mono_l (P1 P2 : (α → PROP) → PROP) (Q : α → PROP) :
     bi_mono0 P1 Q ⊢ (∀ Q, P1 Q -∗ P2 Q) -∗ bi_mono0 P2 Q := by
-  ibubble simp
+  ibubble
   -- simp only [bi_mono0]
   -- iintro Hm HP
   -- icases Hm with ⟨%Q', HP1, HQ1⟩
@@ -104,7 +104,7 @@ theorem bi_mono0_mono_l (P1 P2 : (α → PROP) → PROP) (Q : α → PROP) :
 
 theorem bi_mono0_elim (P : (α → PROP) → PROP) (Q : α → PROP) :
     bi_mono0 P Q ⊢ (∀ Q Q', (∀ x, Q' x -∗ Q x) -∗ P Q' -∗ P Q) -∗ P Q := by
-  ibubble simp
+  ibubble
   -- simp only [bi_mono0]
   -- iintro Hm HP;
   -- icases Hm with ⟨%Q', HPQ', HQ1⟩
@@ -112,7 +112,7 @@ theorem bi_mono0_elim (P : (α → PROP) → PROP) (Q : α → PROP) :
 
 theorem bi_mono0_dup (P : (α → PROP) → PROP) (Q : α → PROP) :
     bi_mono0 (bi_mono0 P) Q ⊢ bi_mono0 P Q := by
-  ibubble simp
+  ibubble
   -- simp only [bi_mono0]
   -- iintro H
   -- icases H with ⟨%Q', Houter, HQw⟩
@@ -123,7 +123,7 @@ theorem bi_mono0_dup (P : (α → PROP) → PROP) (Q : α → PROP) :
 
 theorem bi_mono0_intro (P : (α → PROP) → PROP) (Q Q' : α → PROP) :
     P Q' ⊢ (∀ x, Q' x -∗ Q x) -∗ bi_mono0 P Q := by
-  ibubble simp
+  ibubble
   -- simp only [bi_mono0]
   -- iintro HP HQ
   -- iexists Q'; isplitl [HP]
@@ -207,7 +207,7 @@ theorem lfp_tp_unfold (Ms : List ((α → PROP) → PROP)) :
 @[ibubble backward 70%]
 theorem lfp_tp_nil : ⊢ (lfp_tp F [] : PROP) := by
   iapply (lfp_tp_unfold F []).mpr
-  ibubble simp
+  ibubble
   -- simp only [lfp_tpF]
   -- iintro %i %M %Hi; simp at Hi
 
@@ -219,7 +219,7 @@ theorem lfp_tp_ind (Φ : DiscreteO (List ((α → PROP) → PROP)) → PROP)
       (∀ Ms, lfp_tp F Ms.car -∗ Φ Ms) := by
   iintro #Hwand %Ms Hlfp
   iapply least_fixpoint_ind (lfp_tpF (PROP := PROP) F)
-    <;> ibubble simp
+    <;> ibubble
   -- · iintro !> %y Hlfp; iapply Hwand;
   --   iapply lfp_tpF_mono F $$ [] Hlfp
   --   iintro !> %Ms Hpre; iapply BI.and_congr_right $$ Hpre
@@ -281,12 +281,12 @@ theorem lfp_tpF_perm_close (Ms1 Ms2 : List ((α → PROP) → PROP))
     (h : Ms1.Perm Ms2) :
     lfp_tpF F wp ⟨Ms1⟩ ⊢
     lfp_tpF F (bi_close (λ a b => a.car.Perm b.car) wp) ⟨Ms2⟩ := by
-  ibubble simp pureStop
+  ibubble pureStop
   · exact h
   · exact H1_3.symm
   -- iintro Htp; iapply lfp_tpF_perm $$ Htp
   -- · exact h
-  -- · ibubble simp pureStop
+  -- · ibubble pureStop
   --   exact h0_1.symm
     -- simp only [bi_close]
     -- iintro %Ns1 %Ns2 %Hperm Hwp;

@@ -100,7 +100,7 @@ theorem heapH_init  (σ : heapE.T Loc Val) :
   · ibubble
     -- inext; iexists σ; iassumption
   · imodintro; iexists ⟨Gpre, γ, ""⟩
-    ibubble simp
+    ibubble
     -- unfold heap_inv heapH_inv_name stateInterp_heap pointsto
     -- unfold heap_inv heapH_inv_name
     -- isplitr
@@ -191,7 +191,7 @@ theorem wpi_load? M (l : Loc) (v : Val) (dq : DFrac) (Φ : Option Val → IProp 
     simpa [Iris.Std.get?] using Hlookup
   -- rw [Hlookup]; simp only [Option.join_some]
 
-  ibubble simp
+  ibubble
   -- iframe; iframe Hinv
   -- imodintro; iapply wpi_pure
   -- iapply Hwand $$ [$]
@@ -333,7 +333,7 @@ theorem wpi_allocN M (n : Nat) (v : Val) (Φ : Loc → IProp GF) :
     simpa [Iris.Std.get?] using Hk.2
   icases Hauth with ⟨HauthInv, HauthState⟩
   imod Hclose $$ [HauthInv] with -
-    <;> ibubble simp with [backward BigSepM.bigSepM_ofList]
+    <;> ibubble with [backward BigSepM.bigSepM_ofList]
   -- · iexists σ.insertMany entries;
   --   rw [HinsertMany]; iassumption
   -- imodintro; isplitl [HauthState]
@@ -350,7 +350,7 @@ theorem wpi_alloc M (v : Val) (Φ : Loc → IProp GF) :
     (∀ l, l ↦ v -∗ Φ l) -∗
     WPi (alloc v LawfulLoc.add_pos_nle) @> H; M {{ Φ }} := by
   unfold alloc
-  ibubble simp
+  ibubble
   -- iintro %Hmask Hwand
   -- iapply wpi_allocN M 1 v Φ Hmask
   -- iintro %l Hpts; simp; icases Hpts with ⟨Hpt, -⟩

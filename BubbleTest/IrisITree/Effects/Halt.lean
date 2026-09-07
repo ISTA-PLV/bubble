@@ -46,7 +46,7 @@ attribute [local simp] haltH
 theorem wpi_halt {R} (Φ : R → PROP) :
     ⊢ WPi halt @> H; ⊤ {{ Φ }} := by
   unfold halt
-  ibubble simp pureBy simp
+  ibubble pureBy simp
   -- iapply wpi_bind
   -- iapply wpi_trigger; simp [haltH]
   -- iapply fupd_mask_intro

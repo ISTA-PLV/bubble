@@ -299,7 +299,7 @@ theorem wpi_ind :
     intro Ms t; constructor; intro n Φ₁ Φ₂ HΦ; simp [G'];
     exact wand_ne.ne .rfl <| OFE.NonExpansive.ne HΦ
   iapply wpi_ind_mask G' $$ [] Hwp
-    <;> ibubble simp pureBy simp
+    <;> ibubble pureBy simp
   -- iintro !> %Ms %t %Φ Hwpi %hp; subst hp
   -- iapply HPre
   -- iapply wpiF_mono $$ [] Hwpi
@@ -456,7 +456,7 @@ theorem wpi_bind' {A} M' t (k : A → ITree E R) (Φ : R → PROP) :
     refine forall_ne λ x => wand_ne.ne ?_ .rfl
     exact forall_ne λ x => wand_ne.ne (HΦ x) .rfl
   iapply wpi_iter' G $$ [] [] [] Hwp
-    <;> ibubble simp
+    <;> ibubble
   -- · iintro !> %Φ %r >Hwpi %Ψ Hwand; simp
   --   iapply Hwand $$ [$]
   -- · iintro !> %Φ %t >Hwpi %Ψ Hwand; simp
@@ -500,7 +500,7 @@ theorem wpi_translation {R} (t : ITree E1 R) (Φ : R → PROP) :
   iintro >Hwp #HH
   let G : ITree E1 R → (R → PROP) → PROP := λ t Φ => WPi (ITree.interp f t) @> H2; ∅,Me {{Φ}}
   iapply (wpi_iter' G) $$ [] [] [] Hwp
-    <;> ibubble simp
+    <;> ibubble
   -- · iintro !> %Φ %r >Hret; simp
   --   iapply wpi_pure $$ Hret
   -- · iintro !> %Φ %t >Htau; simp [interp_tau]
@@ -514,7 +514,7 @@ theorem wpi_translation_seq {R} (t : ITree E1 R) (Φ : R → PROP) :
     □ (∀ i Ψ, H1.ihandle i Ψ (λ _ => iprop(True)) -∗
         WPi (f i) @> H2; ∅ {{ Ψ }}) -∗
     WPi (ITree.interp f t) @> H2; Ms,Me {{ Φ }} := by
-  ibubble simp pureBy simp
+  ibubble pureBy simp
   -- iintro Hwp #Hwand; iapply wpi_translation $$ Hwp
   -- iintro !> %i %k %Ψ Hh; iapply wpi_bind; iapply Hwand
   -- iapply H1.ihandle_mono $$ [] [] Hh
@@ -541,7 +541,7 @@ theorem wpi_wandH {R} (t : ITree E R) (Φ : R → PROP) :
   iintro Hwp
   have ht : t = t.interp (λ i => E.trigger i) := by simp [-Effect.trigger]
   rw (occs:=[2]) [ht]; clear ht
-  ibubble simp
+  ibubble
   -- iapply wpi_translation $$ Hwp
   -- iintro !> %i %k %Ψ Hh
   -- simp [Effect.trigger]; iapply wpi_vis; imodintro
@@ -597,12 +597,12 @@ theorem wpi_inH_2 (t : ITree E1 R) (Φ : R → PROP) :
       -- iapply wpi_pure $$ HΦ
     · iintro !> %Ψ %u Hu; simp [G]; iintro %t' %Heq
       rcases interp_tau_inv Heq with ⟨t1, rfl, Heq1⟩
-      ibubble pureBy rfl
+      ibubble noSimp pureBy rfl
       -- imod Hu; iapply wpi_tau';
       -- iapply Hu $$ %t1 %Heq1
     · iintro !> %Ψ %i %k >Hik; simp [G]; iintro %t' %Heq
       rcases interp_vis_inv Heq with ⟨i', k', rfl, rfl, rfl⟩
-      ibubble simp pureBy (first | assumption | rfl)
+      ibubble pureBy (first | assumption | rfl)
       -- simp [emb] at Heq;
       -- iapply wpi_vis; imodintro
       -- iapply Hin.is_inH

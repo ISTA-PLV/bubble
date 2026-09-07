@@ -51,7 +51,7 @@ theorem wpiConstF_mono (H : IHandler PROP E) (Φ : R → PROP)
     □ (∀ t, wp1 t -∗ wp2 t) -∗
     ∀ t, wpiConstF H Φ wp1 t -∗ wpiConstF H Φ wp2 t := by
   iintro #Hwand %t Hwp
-  cases t <;> ibubble simp
+  cases t <;> ibubble
   -- case ret =>
   --   simp [wpiConstF]; iframe
   -- case tau t' =>
@@ -125,7 +125,7 @@ theorem wpi_tp_intro (t : ITree E R) (H : IHandler PROP E) (Φ : R → PROP) :
     bi_least_fixpoint (wpiConstF H Φ) t))) $$ [] %t %Φ Hwpi
   · iintro !> %t %Ψ Hstep #Hpost
     iapply least_fixpoint_unfold_mpr
-    cases t <;> ibubble simp
+    cases t <;> ibubble
     -- cases t
     -- · simp [wpiConstF, wpiF]
     --   imod Hstep; imod Hstep; imodintro
@@ -192,10 +192,10 @@ theorem wpi_adequate_ind (Φ : R → PROP)
     imodintro; iexists t, s, Mss, M
     isplitr; itrivial; iframe Hinv
     isplitl [Ht]
-    · ibubble simp pureBy simp
+    · ibubble pureBy simp
       -- iexists t; iframe; itrivial
     iapply lfp_tp_unfold
-    ibubble simp pureBy assumption
+    ibubble pureBy assumption
     -- iapply lfp_tpF_perm _ Ms.car _ _ _ HMs $$ [$]
     -- iintro %Ns1 %Ns2 %Hperm ⟨-, Htp⟩
     -- iapply lfp_tp_perm _ _ _ Hperm $$ [$]

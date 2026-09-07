@@ -102,7 +102,7 @@ theorem wpi_step M (Φ : PUnit → PROP) :
     WPi step @> H; M {{ Φ }} := by
   change m iprop(|={M}=> Φ ⟨⟩) -∗
     WPi (@Effect.trigger stepE E sub ⟨⟩) @> H; M {{ Φ }}
-  ibubble simp pureBy simp
+  ibubble pureBy simp
   -- iintro HΦ; iapply wpi_trigger; simp only [stepH]
   -- iapply fupd_mask_intro (by simp)
   -- iintro Hclose; iapply m.map $$ HΦ
@@ -126,7 +126,7 @@ instance stepEH_ident_adequate :
     SEHandlerAdequate (stepH (.ident (PROP := IProp GF))) (stepEH (λ _ => 0)) where
   inv _ := iprop(True)
   adequate := by
-    ibubble simp pureStop
+    ibubble pureStop
     · simp
     · exact x
     -- intro i s C Φ₁ Φ₂ Hhandle
@@ -151,7 +151,7 @@ instance stepEH_later_adequate :
       iexact Hlc
     icases Hparts with ⟨Hone, Hrest⟩
     imod lc_fupd_elim_later $$ Hone HΦ with HΦ
-    ibubble simp
+    ibubble
     -- imodintro
     -- iexists ⟨⟩, (ULift.up (s.1.down + 1), ULift.up (s.2.down - 1))
     -- iframe; itrivial

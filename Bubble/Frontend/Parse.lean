@@ -13,6 +13,7 @@ open Lean Elab Tactic
 private meta def parseNormMode (stx : Syntax) : TermElabM Bool := do
   match stx with
   | `(ibubbleNormMode| simp) => pure true
+  | `(ibubbleNormMode| noSimp) => pure false
   | _ => throwUnsupportedSyntax
 
 private meta def parseStrategy (stx : Syntax) : TermElabM Strategy := do
@@ -117,7 +118,7 @@ private meta def mkConfig (generateScript? : Bool)
     | none => pure .bestFirst
     | some strategyStx => parseStrategy strategyStx
   let enableSimp? ← match normModeStx? with
-    | none => pure false
+    | none => pure ({} : SearchConfig).enableSimp?
     | some normModeStx => parseNormMode normModeStx
   let (pureStop?, pureSolver) ← match pureSolverStx? with
     | none => pure (false, defaultPureSolver)

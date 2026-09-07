@@ -48,7 +48,7 @@ theorem wpi_demonic (M : CoPset) (Φ : α → Prop) [Hdec : DecidablePred Φ]
     [Hi: Inhabited {a // Φ a}] (Ψ : {a // Φ a} → PROP) :
     (∀ a, Ψ a) ⊢ WPi choose Φ @> H;M {{ Ψ }} := by
   unfold choose
-  ibubble simp pureBy simp
+  ibubble pureBy simp
   -- iintro HΨ;
   -- iapply wpi_trigger; simp [demonicH]
   -- iapply fupd_mask_intro
@@ -70,7 +70,7 @@ instance demonicEH_adequate {PROP : Type _} [BI PROP] [BIFUpdate PROP] {α : Typ
   inv _ := iprop(emp)
   adequate := by
     intro i s C Φ1 Φ2 ⟨a, s', HC⟩
-    ibubble simp pureStop <;> try simp
+    ibubble pureStop <;> try simp
     exact HC
     -- simp [demonicH] at ⊢
     -- iintro HΦ1 Hinv; imodintro

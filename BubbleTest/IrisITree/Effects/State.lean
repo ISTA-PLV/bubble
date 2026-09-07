@@ -70,7 +70,7 @@ theorem wpi_stateE_set Ms Me s' (Φ : PUnit → PROP) :
     WPi StateE.set s' @> H; Ms, Me {{Φ}} := by
   iintro Hw; unfold StateE.set StateE.modify
   iapply wpi_trigger_bind
-  ibubble simp pureBy simp
+  ibubble pureBy simp
   -- simp [stateH];
   -- iapply fupd_mask_intro (by simp); iintro Hm
   -- iintro %s Hs; imod Hm
@@ -99,7 +99,7 @@ instance stateEH_adequate :
     SEHandlerAdequate (stateH stateInterp) (stateEH S) where
   inv s := stateInterp s
   adequate := by
-    ibubble simp pureBy simp
+    ibubble pureBy simp
     -- intro i s C Φ1 Φ2 Hhandle
     -- simp [stateH, stateEH] at Hhandle ⊢
     -- iintro Hs Hinv; imod Hs $$ [$] with ⟨_, _⟩

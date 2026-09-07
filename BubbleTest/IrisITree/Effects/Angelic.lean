@@ -49,7 +49,7 @@ attribute [local simp] angelicH
 theorem wpi_angelic (M : CoPset) (p : α → Prop) (a : {x // p x}) (Ψ : {x // p x} → PROP) :
     Ψ a ⊢ (WPi (choose_angelic p) @> H; M {{ Ψ }}) := by
   unfold choose_angelic
-  ibubble simp pureBy simp
+  ibubble pureBy simp
   -- iintro HΨ
   -- iapply wpi_trigger; simp [angelicH]
   -- iapply fupd_mask_intro
@@ -70,7 +70,7 @@ instance angelicEH_adequate {PROP : Type _} [BI PROP] [BIFUpdate PROP] {α : Typ
     SEHandlerAdequate (angelicH (PROP := PROP) α) (angelicEH α) where
   inv _ := iprop(emp)
   adequate := by
-    ibubble simp pureBy simp_all
+    ibubble pureBy simp_all
     -- intro i s C Φ1 Φ2 Hhandle
     -- simp [angelicH, angelicEH] at Hhandle ⊢
     -- iexists a, s

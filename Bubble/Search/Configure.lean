@@ -48,8 +48,8 @@ structure SearchConfig where
   strategy : Strategy := Strategy.bestFirst
   /- whether generated script after proven (default: false) -/
   generateScript? : Bool := false
-  /- whether enable simplifier during normalization stage (default: false) -/
-  enableSimp? : Bool := false
+  /- whether to enable the simplifier during normalization (default: true) -/
+  enableSimp? : Bool := true
   /- Solver run on pure Lean goals produced by `ipureintro`. -/
   pureSolver : Syntax := defaultPureSolver
   /- Stop search at pure Iris goals and expose their Lean propositions. -/

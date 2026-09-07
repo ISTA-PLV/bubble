@@ -141,9 +141,9 @@ instance {PROP E₁ E₂} [BI PROP]
     WandH (H1 ⊕ₕ H2) (H1' ⊕ₕ H2') := by
     constructor; intro e Φ s
     cases e with
-    | inl e1 => ibubble simp
+    | inl e1 => ibubble
       -- iintro H; simp only [sumH_inl]; iapply Hwand1.is_wandH $$ H
-    | inr e2 => ibubble simp
+    | inr e2 => ibubble
       -- iintro H; simp only [sumH_inr]; iapply Hwand2.is_wandH $$ H
 
 end handler_WandH
@@ -162,9 +162,9 @@ instance {PROP E₁ E₂} [BI PROP]
   [Hs1 : Sequential H1] [Hs2 : Sequential H2] : Sequential (H1 ⊕ₕ H2) := by
     constructor; intro e Φ s
     cases e with
-    | inl e1 => ibubble simp
+    | inl e1 => ibubble
       -- iintro H; simp only [sumH_inl]; iapply Hs1.is_seq $$ H
-    | inr e2 => ibubble simp
+    | inr e2 => ibubble
       -- iintro H; simp only [sumH_inr]; iapply Hs2.is_seq $$ H
 
 end handler_Sequential
@@ -210,7 +210,7 @@ instance {E GE : Effect.{u} } {R σ : Type _}
     iintro Hh Hinv
     ihave >⟨%a, %s', %_, Hinv, HG⟩ := A.adequate $$ Hh [$]; assumption
     iexists (k a), s', (λ P => P (k a)), Ms, [λ P => P (k a)]
-    ibubble simp pureBy simp [*]
+    ibubble pureBy simp [*]
     -- imodintro
     -- isplitr; itrivial
     -- iframe
