@@ -27,10 +27,10 @@ def haveHypsRule : Rule RuleInfo :=
   builtinRule `haveHyps .forward .haveHyps .medium
 
 def icasesRule : Rule RuleInfo :=
-  builtinRule `icases .forward .icases .almost
+  builtinRule `icases .forward .icases .low
 
 def icasesFalseRule : Rule RuleInfo :=
-  builtinRule `icasesFalse .forward .icasesFalse ⟨0.1⟩
+  builtinRule `icasesFalse .forward .icasesFalse .almost
 
 def ipureIntroRule : Rule RuleInfo :=
   builtinRule `ipureIntro .apply .ipureIntro .high
