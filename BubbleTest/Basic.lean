@@ -55,13 +55,13 @@ example [BI PROP] (P : PROP) : P ⊢ P := by
   ibubble breadthFirst
 
 example [BI PROP] (P : PROP) : P ⊢ P := by
-  ibubble simp
+  ibubble
 
 example [BI PROP] (P : PROP) : P ⊢ P := by
-  ibubble depthFirst simp
+  ibubble depthFirst
 
 example [BI PROP] (P : PROP) : P ⊢ P := by
-  ibubble breadthFirst simp
+  ibubble breadthFirst
 
 example [BI PROP] (P : PROP) : P ⊢ P := by
   ibubble maxDepth 200
@@ -107,6 +107,19 @@ example [BI PROP] (P Q R : PROP) :
 example [BI PROP] (P Q : Nat → PROP) :
     (P 1 -∗ P 2 -∗ Q 1) ⊢ □ P 1 -∗ P 2 -∗ Q 1 := by
   ibubble
+
+/- A unary `iapply` suggestion explicitly records the spatial context given to
+its sole child. -/
+/--
+info: Try this:
+
+  [apply] iapply Hwand $$ [ HP ]
+    iexact HP
+-/
+#guard_msgs in
+example [BI PROP] (P Q : PROP) : □ (P -∗ Q) -∗ P -∗ Q := by
+  iintro #Hwand HP
+  ibubble?
 
 /-- Tests `ispecialize` with named subgoal -/
 @[ibubble backward 100%]
@@ -192,7 +205,7 @@ theorem local_rule_added_test [BI PROP] : ⊢@{PROP} ⌜True ∧ True⌝ := by
   exact And.intro True.intro True.intro
 
 example [BI PROP] : ⊢@{PROP} ⌜True ∧ True⌝ := by
-  ibubble with [backward local_rule_added_test 75%]
+  ibubble noSimp with [backward local_rule_added_test 75%]
 
 theorem removable_rule_test [BI PROP] : ⊢@{PROP} ⌜True ∧ True⌝ := by
   ipureintro
@@ -205,9 +218,9 @@ error: unsolved goals
 -/
 #guard_msgs (substring := true) in
 example [BI PROP] : ⊢@{PROP} ⌜True ∧ True⌝ := by
-  ibubble without [backward removable_rule_test]
+  ibubble noSimp without [backward removable_rule_test]
 
 example [BI PROP] : ⊢@{PROP} ⌜True ∧ True⌝ := by
-  ibubble
+  ibubble noSimp
 
 end LocalRuleFrontend
