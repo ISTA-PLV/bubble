@@ -13,6 +13,7 @@ open Lean Elab Tactic
 private meta def parseNormMode (stx : Syntax) : TermElabM Bool := do
   match stx with
   | `(ibubbleNormMode| simp) => pure true
+  | `(ibubbleNormMode| noSimp) => pure false
   | _ => throwUnsupportedSyntax
 
 private meta def parseStrategy (stx : Syntax) : TermElabM Strategy := do
@@ -67,6 +68,18 @@ private meta def parseRuleDirection (stx : Syntax) : TermElabM RuleBuilderKind :
 
 private meta def parseLocalRule (stx : Syntax) : TermElabM LocalTheoremRule := do
   match stx with
+  | `(ibubbleLocalRule| $declStx:ident) =>
+      return {
+        kind := .backward
+        decl := ← parseRuleDecl declStx
+        action := .insert .hundred
+      }
+  | `(ibubbleLocalRule| $declStx:ident $p:num %) =>
+      return {
+        kind := .backward
+        decl := ← parseRuleDecl declStx
+        action := .insert (← parseSuccessProbability p)
+      }
   | `(ibubbleLocalRule| $dir:ibubbleRuleDirection $declStx:ident) =>
       return {
         kind := ← parseRuleDirection dir
@@ -83,6 +96,12 @@ private meta def parseLocalRule (stx : Syntax) : TermElabM LocalTheoremRule := d
 
 private meta def parseErasedRule (stx : Syntax) : TermElabM LocalTheoremRule := do
   match stx with
+  | `(ibubbleErasedRule| $declStx:ident) =>
+      return {
+        kind := .backward
+        decl := ← parseRuleDecl declStx
+        action := .erase
+      }
   | `(ibubbleErasedRule| $dir:ibubbleRuleDirection $declStx:ident) =>
       return {
         kind := ← parseRuleDirection dir
@@ -117,7 +136,7 @@ private meta def mkConfig (generateScript? : Bool)
     | none => pure .bestFirst
     | some strategyStx => parseStrategy strategyStx
   let enableSimp? ← match normModeStx? with
-    | none => pure false
+    | none => pure ({} : SearchConfig).enableSimp?
     | some normModeStx => parseNormMode normModeStx
   let (pureStop?, pureSolver) ← match pureSolverStx? with
     | none => pure (false, defaultPureSolver)

@@ -10,9 +10,11 @@ syntax "bestFirst" : ibubbleStrategy
 syntax "depthFirst" : ibubbleStrategy
 syntax "breadthFirst" : ibubbleStrategy
 
-/- Specify the normalization mode used by ibubble. -/
+/- Control simplification during normalization. It is enabled by default;
+`simp` is retained for compatibility and `noSimp` is the explicit opt-out. -/
 declare_syntax_cat ibubbleNormMode
 syntax "simp" : ibubbleNormMode
+syntax "noSimp" : ibubbleNormMode
 
 /- Pure-goal behavior: either run a solver or stop after `ipureintro`. -/
 declare_syntax_cat ibubblePureSolver
@@ -34,9 +36,11 @@ syntax "forward" : ibubbleRuleDirection
 
 declare_syntax_cat ibubbleLocalRule
 syntax ibubbleRuleDirection ppSpace ident (ppSpace num "%")? : ibubbleLocalRule
+syntax ident (ppSpace num "%")? : ibubbleLocalRule
 
 declare_syntax_cat ibubbleErasedRule
 syntax ibubbleRuleDirection ppSpace ident : ibubbleErasedRule
+syntax ident : ibubbleErasedRule
 
 declare_syntax_cat ibubbleRuleEdit
 syntax "with" "[" ibubbleLocalRule,* "]" : ibubbleRuleEdit

@@ -19,7 +19,7 @@ initialize ibubbleBackwardExt :
     SimpleScopedEnvExtension RuleAttrEntry (Array RuleAttrEntry) ←
   registerSimpleScopedEnvExtension {
     addEntry := λ s entry =>
-      if s.any λ old => old.decl == entry.decl then s else s.push entry
+      (s.filter fun old => old.decl != entry.decl).push entry
     initial := #[]
   }
 
@@ -28,7 +28,7 @@ initialize ibubbleForwardExt :
     SimpleScopedEnvExtension RuleAttrEntry (Array RuleAttrEntry) ←
   registerSimpleScopedEnvExtension {
     addEntry := λ s entry =>
-      if s.any λ old => old.decl == entry.decl then s else s.push entry
+      (s.filter fun old => old.decl != entry.decl).push entry
     initial := #[]
   }
 
@@ -37,6 +37,7 @@ namespace Parser
 declare_syntax_cat ibubbleAttrRule
 syntax "forward" num "%" : ibubbleAttrRule
 syntax "backward" num "%" : ibubbleAttrRule
+syntax num "%" : ibubbleAttrRule
 
 syntax (name := ibubble) "ibubble" (ppSpace ibubbleAttrRule)+ : attr
 
@@ -63,6 +64,8 @@ def «elab» (stx : Syntax) : CoreM AttrRule :=
       return .forward (← elabSuccessProbability "forward" p)
     | `(ibubbleAttrRule| backward $p:num %) =>
       return .backward (← elabSuccessProbability "backward" p)
+    | `(ibubbleAttrRule| $p:num %) =>
+      return .backward (← elabSuccessProbability "backward" p)
     | _ => throwUnsupportedSyntax
 
 end AttrRule
@@ -83,13 +86,13 @@ end AttrConfig
 
 private def addBackwardRule (decl : Name) (successProbability : Percent)
     (kind : AttributeKind) : CoreM Unit := do
-  if (ibubbleBackwardExt.getState (← getEnv)).any λ entry => entry.decl == decl then
+  if kind != .local && (ibubbleBackwardExt.getState (← getEnv)).any λ entry => entry.decl == decl then
     throwError "ibubble: backward rule '{decl}' is already registered"
   ibubbleBackwardExt.add { decl, successProbability } kind
 
 private def addForwardRule (decl : Name) (successProbability : Percent)
     (kind : AttributeKind) : CoreM Unit := do
-  if (ibubbleForwardExt.getState (← getEnv)).any λ entry => entry.decl == decl then
+  if kind != .local && (ibubbleForwardExt.getState (← getEnv)).any λ entry => entry.decl == decl then
     throwError "ibubble: forward rule '{decl}' is already registered"
   ibubbleForwardExt.add { decl, successProbability } kind
 
