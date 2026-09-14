@@ -15,7 +15,6 @@ instance {E R} : OFE.Discrete (ITree E R) := ⟨fun h => h⟩
 
 end IrisITree
 
--- TODO: upstream?
 namespace ITree
 
 open ITree

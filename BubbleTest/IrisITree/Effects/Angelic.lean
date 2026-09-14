@@ -20,17 +20,12 @@ def angelicH (α : Type _) : IHandler PROP (angelicE α) where
   ihandle := λ _ Φ _ => iprop(∃ a, Φ a)
   ihandle_mono := by
     ibubble
-    -- iintro %p %Φ %Φ' %s %s' HΦwand #Hswand H
-    -- icases H with ⟨%a, HΦ⟩
-    -- iexists a; iapply HΦwand $$ HΦ
 
 instance angelicH_sequential {α : Type _} :
     Sequential (PROP := PROP) (angelicH (PROP := PROP) α) := by
   constructor
   unfold angelicH
   ibubble
-  -- iintro %p %Φ %s H
-  -- iexact H
 
 end handler
 
@@ -42,20 +37,13 @@ variable {PROP : Type _} [BI PROP] [BIFUpdate PROP] {E : Effect}
   {H : IHandler PROP E} {α : Type _}
   [sub : angelicE α -< E] [Hin : InH (angelicH (PROP := PROP) α) H]
 
-attribute [local ibubble backward 75%] wpi_trigger
-attribute [local ibubble backward 50%] fupd_mask_intro
+attribute [local ibubble 50%] fupd_mask_intro
 attribute [local simp] angelicH
 
 theorem wpi_angelic (M : CoPset) (p : α → Prop) (a : {x // p x}) (Ψ : {x // p x} → PROP) :
     Ψ a ⊢ (WPi (choose_angelic p) @> H; M {{ Ψ }}) := by
   unfold choose_angelic
-  ibubble simp pureBy simp
-  -- iintro HΨ
-  -- iapply wpi_trigger; simp [angelicH]
-  -- iapply fupd_mask_intro
-  -- · simp
-  -- iintro Hfalse; iexists a
-  -- imod Hfalse; imodintro; iexact HΨ
+  ibubble pureBy simp
 
 end wpi_rules
 
@@ -70,11 +58,6 @@ instance angelicEH_adequate {PROP : Type _} [BI PROP] [BIFUpdate PROP] {α : Typ
     SEHandlerAdequate (angelicH (PROP := PROP) α) (angelicEH α) where
   inv _ := iprop(emp)
   adequate := by
-    ibubble simp pureBy simp_all
-    -- intro i s C Φ1 Φ2 Hhandle
-    -- simp [angelicH, angelicEH] at Hhandle ⊢
-    -- iexists a, s
-    -- iframe
-    -- itrivial
+    ibubble pureBy simp_all
 
 end exec

@@ -86,49 +86,30 @@ section wpi_rules
 variable {GF} [InvGS GF] [heaplangHGS GF]
   {m : StepMod (IProp GF)}
 
-attribute [local ibubble backward 75%] wpi_bind
-attribute [local ibubble backward 10%] StepMod.map
-
-@[ibubble backward 75%]
+@[ibubble 75%]
 theorem wpi_step_pure E (v : Val) (Φ : Val → IProp GF) :
     m (Φ v) -∗
     WPi (do
       step
       pure v) @> heaplangH m; E {{ Φ }} := by
-  ibubble simp
-  -- iintro HΦ
-  -- iapply wpi_bind
-  -- iapply wpi_step
-  -- iapply m.map $$ HΦ
-  -- iintro HΦ
-  -- imodintro
-  -- iapply wpi_pure $$ HΦ
+  ibubble
 
 attribute [local simp] Exp.yieldIfNotVal
 
-@[ibubble backward 75%]
+@[ibubble 75%]
 theorem wpi_yieldIfNotVal (e : Exp) (Φ : Unit → IProp GF) :
     Φ () -∗
     WPi e.yieldIfNotVal @> heaplangH m; ⊤ {{ Φ }} := by
-  cases e <;> ibubble simp
-  -- cases e <;> simp only [Exp.yieldIfNotVal]
-  -- · iintro HΦ; iapply wpi_pure $$ [$]
-  -- all_goals
-  --   iintro HΦ; iapply wpi_yield $$ [$]
+  cases e <;> ibubble
 
-@[ibubble backward 75%]
+@[ibubble 75%]
 theorem wpi_cont (e : Exp) (Φ : Val → IProp GF) :
     m (WP e @ m ; ⊤ {{ Φ }}) -∗
     WPi (do
       step
       e.yieldIfNotVal
       e.denote) @> heaplangH m; ⊤ {{ Φ }} := by
-  ibubble
-  -- iintro Hwp; iapply wpi_bind
-  -- iapply wpi_step
-  -- iapply m.map $$ Hwp
-  -- iintro Hwp !>; iapply wpi_bind
-  -- iapply wpi_yieldIfNotVal; iframe
+  ibubble noSimp
 
 end wpi_rules
 
@@ -137,8 +118,7 @@ section wp_rules
 variable {GF} [InvGS GF] [heaplangHGS GF]
   {m : StepMod (IProp GF)}
 
-attribute [local ibubble backward 10%] wpi_wand
-attribute [local ibubble backward 10%] StepMod.map
+attribute [local ibubble 10%] wpi_wand
 
 @[local simp]
 theorem wp_unfold {M : CoPset} (e : Exp) (Φ : Val → IProp GF) :
@@ -148,39 +128,25 @@ theorem wp_unfold {M : CoPset} (e : Exp) (Φ : Val → IProp GF) :
 theorem wp_later_weaken {M : CoPset} (e : Exp) (Φ : Val → IProp GF) :
     WP e @ (StepMod.ident (PROP := IProp GF)); M {{ Φ }} -∗
     WP e @ (StepMod.later (PROP := IProp GF)); M {{ Φ }} := by
-  ibubble simp pureStop with [backward wpi_wandH]
+  ibubble pureStop with [wpi_wandH]
   infer_instance
-  -- simp only [wp_unfold]
-  -- iintro Hwp
-  -- iapply (wpi_wandH
-  --   (H1 := heaplangH (StepMod.ident (PROP := IProp GF)))
-  --   (H2 := heaplangH (StepMod.later (PROP := IProp GF))))
-  -- iexact Hwp
 
 theorem wp_wand {M : CoPset} (e : Exp) (Φ Ψ : Val → IProp GF) :
     WP e @ m ; M {{ Φ }} -∗
     (∀ v, Φ v -∗ Ψ v) -∗
     WP e @ m ; M {{ Ψ }} := by
   ibubble
-  -- simp only [wp_unfold]
-  -- apply wpi_wand
 
 theorem wp_frame_l {M : CoPset} (e : Exp) (Φ : Val → IProp GF) :
     P ∗ WP e @ m; M {{ Φ }} -∗ WP e @ m; M {{v , P ∗ Φ v}} := by
   ibubble
-  -- iintro ⟨HP, Hwp⟩
-  -- iapply wp_wand $$ Hwp [HP]
-  -- iintro %_ _; iframe
 
 theorem wp_atomic E1 E2 (e : Exp) (Φ : Val → IProp GF) :
     (|={E1,E2}=> WP e @ m ; E2 {{ v, |={E2,E1}=> Φ v }}) ⊢ WP e @ m ; E1 {{ Φ }} := by
   simp only [wp_unfold]
   iintro > >Hwp
   ihave Hwp := wpi_fupd_empty $$ Hwp
-  ibubble with [backward wpi_fupd_empty_2 25%]
-  -- iapply wpi_fupd_empty_2
-  -- iapply wpi_wand $$ Hwp
-  -- iintro %_ > > $
+  ibubble with [wpi_fupd_empty_2 25%]
 
 theorem fupd_wp {M : CoPset} (e : Exp) (Φ : Val → IProp GF) :
     (|={M}=> WP e @ m ; M {{ v, Φ v }}) ⊢ WP e @ m ; M {{ Φ }} := by
@@ -192,144 +158,92 @@ theorem wp_fupd {M : CoPset} (e : Exp) (Φ : Val → IProp GF) :
   simp only [wp_unfold]
   iapply (wpi_fupd _).2
 
-@[ibubble backward 75%]
+@[ibubble 75%]
 theorem wp_val {M : CoPset} (v : Val) (Φ : Val → IProp GF) :
     Φ v -∗
     WP hl(v(&v)) @ m ; M {{ Φ }} := by
   simp only [wp_unfold, ← val_to_ofVal, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro HΦ
-  -- iapply wpi_pure $$ [$]
+  ibubble
 
 theorem wp_unop {M : CoPset} (op : UnOp) (v v' : Val) (Φ : Val → IProp GF) :
     ⌜op.denote v = pure v'⌝ -∗
     m (Φ v') -∗
     WP (Exp.unop op (Exp.val v)) @ m ; M {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_5, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro %Hop HΦ
-  -- rw [Hop]
-  -- simp only [LawfulMonad.pure_bind]
-  -- ibubble
-  -- iapply wpi_step_pure $$ [$]
+  simp only [wp_unfold, Exp.denote.eq_5, Exp.isVal, Exp.denote.eq_1]
+  ibubble
 
 theorem wp_binop {M : CoPset} (op : BinOp) (v₁ v₂ v' : Val) (Φ : Val → IProp GF) :
     ⌜op.denote v₁ v₂ = pure v'⌝ -∗
     m (Φ v') -∗
     WP (Exp.binop op (Exp.val v₁) (Exp.val v₂)) @ m ; M {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_6, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro % Hop HΦ
-  -- rw [Hop]
-  -- simp only [LawfulMonad.pure_bind]
-  -- iapply wpi_step_pure $$ [$]
+  simp only [wp_unfold, Exp.denote.eq_6, Exp.isVal, Exp.denote.eq_1]
+  ibubble
 
 theorem wp_if_true (e₁ e₂ : Exp) (Φ : Val → IProp GF) :
     m (WP e₁ @ m ; ⊤ {{ Φ }}) -∗
     WP (Exp.if (Exp.val (Val.lit (BaseLit.bool true))) e₁ e₂) @ m ; ⊤ {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_7, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro Hwp
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind;
-  -- iapply wpi_pure; simp
-  -- iapply wpi_cont $$ [$]
+  simp only [wp_unfold, Exp.denote.eq_7, Exp.isVal, Exp.denote.eq_1]
+  ibubble
 
 theorem wp_if_false (e₁ e₂ : Exp) (Φ : Val → IProp GF) :
     m (WP e₂ @ m ; ⊤ {{ Φ }}) -∗
     WP (Exp.if (Exp.val (Val.lit (BaseLit.bool false))) e₁ e₂) @ m ; ⊤ {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_7, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro Hwp
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; simp only [Val.bool!]
-  -- iapply wpi_pure; simp only [Bool.false_eq_true, ↓reduceIte]
-  -- iapply wpi_cont $$ [$]
+  simp only [wp_unfold, Exp.denote.eq_7, Exp.isVal, Exp.denote.eq_1]
+  ibubble
 
 theorem wp_app (f x : Binder) (v : Val) (e : Exp) (Φ : Val → IProp GF) :
     m (WP ((e.subst f (.rec_ f x e)).subst x v) @ m ; ⊤ {{ Φ }}) -∗
     WP (Exp.app (Exp.val (Val.rec_ f x e)) (Exp.val v)) @ m ; ⊤ {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_4, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro Hwp
-  -- iapply wpi_cont $$ [$]
+  simp only [wp_unfold, Exp.denote.eq_4, Exp.isVal, Exp.denote.eq_1]
+  ibubble
 
 theorem wp_rec {M : CoPset} (f x : Binder) (e : Exp) (Φ : Val → IProp GF) :
     m (Φ (.rec_ f x e)) -∗
     WP (Exp.rec_ f x e) @ m ; M {{ Φ }} := by
   simp only [wp_unfold, Exp.denote.eq_3]
-  ibubble simp
-  -- iintro HΦ
-  -- iapply wpi_step_pure $$ [$]
+  ibubble
 
 theorem wp_pair {M : CoPset} (v₁ v₂ : Val) (Φ : Val → IProp GF) :
     m (Φ (.pair v₁ v₂)) -∗
     WP (Exp.pair (.val v₁) (.val v₂)) @ m ; M {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_8, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro HΦ
-  -- iapply wpi_bind; iapply wpi_pure
-  -- iapply wpi_bind; iapply wpi_pure
-  -- iapply wpi_step_pure $$ [$]
+  simp only [wp_unfold, Exp.denote.eq_8, Exp.isVal, Exp.denote.eq_1]
+  ibubble
 
 theorem wp_fst {M : CoPset} (v₁ v₂ : Val) (Φ : Val → IProp GF) :
     m (Φ v₁) -∗
     WP (Exp.fst (.val (.pair v₁ v₂))) @ m ; M {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_9, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro HΦ
-  -- iapply wpi_bind; iapply wpi_pure
-  -- iapply wpi_bind; simp only [Val.pair!]
-  -- iapply wpi_step_pure $$ [$]
+  simp only [wp_unfold, Exp.denote.eq_9, Exp.isVal, Exp.denote.eq_1]
+  ibubble
 
 theorem wp_snd {M : CoPset} (v₁ v₂ : Val) (Φ : Val → IProp GF) :
     m (Φ v₂) -∗
     WP (Exp.snd (.val (.pair v₁ v₂))) @ m ; M {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_10, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro HΦ
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; simp only [Val.pair!]
-  -- iapply wpi_pure
-  -- iapply wpi_step_pure $$ [$]
+  simp only [wp_unfold, Exp.denote.eq_10, Exp.isVal, Exp.denote.eq_1]
+  ibubble
 
 theorem wp_injL {M : CoPset} (v : Val) (Φ : Val → IProp GF) :
     m (Φ (.injL v)) -∗
     WP (Exp.injL (.val v)) @ m ; M {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_11, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro HΦ
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_step_pure $$ [$]
+  simp only [wp_unfold, Exp.denote.eq_11, Exp.isVal, Exp.denote.eq_1]
+  ibubble
 
 theorem wp_injR {M : CoPset} (v : Val) (Φ : Val → IProp GF) :
     m (Φ (.injR v)) -∗
     WP (Exp.injR (.val v)) @ m ; M {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_12, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro HΦ
-  -- iapply wpi_bind; iapply wpi_pure
-  -- iapply wpi_step_pure $$ [$]
+  simp only [wp_unfold, Exp.denote.eq_12, Exp.isVal, Exp.denote.eq_1]
+  ibubble
 
 theorem wp_caseL (v : Val) (e₁ e₂ : Exp) (Φ : Val → IProp GF) :
     m (WP (Exp.app e₁ (Exp.val v)) @ m ; ⊤ {{ Φ }}) -∗
     WP (Exp.case (Exp.val (Val.injL v)) e₁ e₂) @ m ; ⊤ {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_13, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro Hwp
-  -- iapply wpi_bind; iapply wpi_pure
-  -- iapply wpi_cont $$ [$]
+  simp only [wp_unfold, Exp.denote.eq_13, Exp.isVal, Exp.denote.eq_1]
+  ibubble
 
 theorem wp_caseR (v : Val) (e₁ e₂ : Exp) (Φ : Val → IProp GF) :
     m (WP (Exp.app e₂ (Exp.val v)) @ m ; ⊤ {{ Φ }}) -∗
     WP (Exp.case (Exp.val (Val.injR v)) e₁ e₂) @ m ; ⊤ {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_13, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp
-  -- iintro Hwp
-  -- iapply wpi_bind; iapply wpi_pure
-  -- iapply wpi_cont $$ [$]
-
-attribute [local ibubble backward 99%] wpi_bind
+  simp only [wp_unfold, Exp.denote.eq_13, Exp.isVal, Exp.denote.eq_1]
+  ibubble
 
 theorem wp_fork (e : Exp) (Φ : Val → IProp GF) :
     m (Φ (.lit .unit)) -∗
@@ -339,18 +253,12 @@ theorem wp_fork (e : Exp) (Φ : Val → IProp GF) :
   simp only [wp_unfold, Exp.denote.eq_21, Exp.isVal]
   iapply wpi_bind; iapply wpi_fork $$ [HΦ]
   · ibubble
-    -- iapply wpi_step_pure $$ [$]
   · iapply wpi_bind;
     cases e <;> simp only [↓reduceIte, ConcE.yieldAfter, Bool.false_eq_true]
-    · ibubble simp pureBy simp
-      -- iapply wpi_wand $$ Hwp;
-      -- iintro %_ _; iapply wpi_pure; itrivial
+    · ibubble pureBy simp
     all_goals
       iapply wpi_bind; iapply wpi_wand $$ Hwp
-      ibubble simp pureBy try simp
-      -- iintro %_ _; iapply wpi_bind; iapply wpi_yield
-      -- iapply wpi_pure; iapply wpi_pure; itrivial
-
+      ibubble pureBy try simp
 
 section heap_rules
 
@@ -358,7 +266,7 @@ attribute [local simp] Val.int!
 /- [Note]: Remove this theorem from the simp set. -/
 attribute [-simp] Int.not_le
 
-@[ibubble backward 75%]
+@[ibubble 75%]
 theorem wp_allocN {M : CoPset} (n : Int) (v : Val) (Φ : Val → IProp GF) :
     0 < n →
     ↑(heapH_inv_name (GF := GF) (Loc := Loc) (Val := Val)) ⊆ M →
@@ -368,92 +276,46 @@ theorem wp_allocN {M : CoPset} (n : Int) (v : Val) (Φ : Val → IProp GF) :
     WP (Exp.allocN (.val (.lit (.int n))) (.val v)) @ m; M {{ Φ }} := by
   iintro %Hpos %Hmask HΦ
   have Hle := Int.not_le.mpr Hpos; clear Hpos
-  simp only [wp_unfold, Exp.denote.eq_14, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp pureBy simp [*] without [backward wpi_wand]
-  -- iapply wpi_bind; iapply wpi_pure
-  -- iapply wpi_bind; iapply wpi_pure
-  -- iapply wpi_bind; simp only [Val.int!];
-  -- iapply wpi_pure
-  -- simp only [Hle, ↓reduceIte]
-  -- iapply wpi_bind; iapply wpi_allocN _ _ _ _ Hmask
-  -- iintro %l Hpts; iapply wpi_step_pure
-  -- iapply m.map $$ HΦ
-  -- iintro HΦ; ispecialize HΦ $$ %l
-  -- iapply HΦ $$ Hpts
+  simp only [wp_unfold, Exp.denote.eq_14, Exp.isVal, Exp.denote.eq_1]
+  ibubble pureBy simp [*]
 
 theorem wp_alloc {M : CoPset} (v : Val) (Φ : Val → IProp GF) :
     ↑(heapH_inv_name (GF := GF) (Loc := Loc) (Val := Val)) ⊆ M →
     m iprop(∀ l, l ↦ v -∗ Φ (.lit (.loc l))) -∗
     WP (Exp.allocN (.val (.lit (.int 1))) (.val v)) @ m; M {{ Φ }} := by
-  ibubble simp pureBy simp [*]
-  -- iintro %Hmask HΦ
-  -- iapply wp_allocN 1 _ _ (by omega) Hmask
-  -- iapply m.map $$ HΦ
-  -- iintro HΦ %l Hpts; ispecialize HΦ $$ %l
-  -- iapply HΦ; simp [List.range_one, LawfulLoc.add_zero]
-  -- icases Hpts with ⟨H, -⟩; iframe
+  ibubble pureBy simp [*]
 
 theorem wp_load {M : CoPset} (l : Loc) (v : Val) (dq : DFrac) (Φ : Val → IProp GF) :
     ↑(heapH_inv_name (GF := GF) (Loc := Loc) (Val := Val)) ⊆ M →
     l ↦{dq} v -∗
     m iprop(l ↦{dq} v -∗ Φ v) -∗
     WP (Exp.load (Exp.val (Val.lit (BaseLit.loc l)))) @ m ; M {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_16, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp pureBy simp [*] without [backward wpi_wand]
-  -- iintro %Hmask Hpt HΦ
-  -- iapply wpi_bind; iapply wpi_pure
-  -- iapply wpi_bind; simp only [Val.loc!]
-  -- iapply wpi_pure; iapply wpi_bind
-  -- iapply wpi_load! _ _ _ _ _ Hmask $$ Hpt
-  -- iintro Hpt; iapply wpi_step_pure
-  -- iapply m.wand $$ HΦ Hpt
+  simp only [wp_unfold, Exp.denote.eq_16, Exp.isVal, Exp.denote.eq_1]
+  ibubble pureBy simp [*]
 
 theorem wp_store {M : CoPset} (l : Loc) (v v' : Val) (Φ : Val → IProp GF) :
     ↑(heapH_inv_name (GF := GF) (Loc := Loc) (Val := Val)) ⊆ M →
     l ↦ v -∗
     m iprop(l ↦ v' -∗ Φ (.lit .unit)) -∗
     WP (Exp.store (Exp.val (Val.lit (BaseLit.loc l))) (Exp.val v')) @ m ; M {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_17, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp pureBy simp [*] without [backward wpi_wand]
-  -- iintro %Hmask Hpt HΦ
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; simp only [Val.loc!]
-  -- iapply wpi_pure; iapply wpi_bind
-  -- iapply wpi_store! _ _ _ _ _ Hmask $$ Hpt
-  -- iintro Hpt; iapply wpi_step_pure
-  -- iapply m.wand $$ HΦ Hpt
+  simp only [wp_unfold, Exp.denote.eq_17, Exp.isVal, Exp.denote.eq_1]
+  ibubble pureBy simp [*]
 
 theorem wp_free {M : CoPset} (l : Loc) (v : Val) (Φ : Val → IProp GF) :
     ↑(heapH_inv_name (GF := GF) (Loc := Loc) (Val := Val)) ⊆ M →
     l ↦ v -∗
     m iprop(l ↦? (none : Option Val) -∗ Φ (.lit .unit)) -∗
     WP (Exp.free (Exp.val (Val.lit (BaseLit.loc l)))) @ m ; M {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_15, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp pureBy simp [*] without [backward wpi_wand]
-  -- iintro %Hmask Hpt HΦ
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; simp only [Val.loc!]
-  -- iapply wpi_pure; iapply wpi_bind
-  -- iapply wpi_storeOpt _ _ _ _ _ Hmask $$ Hpt
-  -- iintro Hpt; iapply wpi_step_pure
-  -- iapply m.wand $$ HΦ Hpt
+  simp only [wp_unfold, Exp.denote.eq_15, Exp.isVal, Exp.denote.eq_1]
+  ibubble pureBy simp [*]
 
 theorem wp_xchg {M : CoPset} (l : Loc) (v v' : Val) (Φ : Val → IProp GF) :
     ↑(heapH_inv_name (GF := GF) (Loc := Loc) (Val := Val)) ⊆ M →
     l ↦ v -∗
     m iprop(l ↦ v' -∗ Φ v) -∗
     WP (Exp.xchg (Exp.val (Val.lit (BaseLit.loc l))) (Exp.val v')) @ m ; M {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_19, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp pureBy simp [*] without [backward wpi_wand]
-  -- iintro %Hmask Hpt HΦ
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; simp only [Val.loc!]
-  -- iapply wpi_pure; iapply wpi_bind
-  -- iapply wpi_store! _ _ _ _ _ Hmask $$ Hpt
-  -- iintro Hpt; iapply wpi_step_pure
-  -- iapply m.wand $$ HΦ Hpt
+  simp only [wp_unfold, Exp.denote.eq_19, Exp.isVal, Exp.denote.eq_1]
+  ibubble pureBy simp [*]
 
 theorem wp_cmpXchg_fail {M : CoPset} (l : Loc) (dq : DFrac) (v' v₁ v₂ : Val) (Φ : Val → IProp GF) :
     ↑(heapH_inv_name (GF := GF) (Loc := Loc) (Val := Val)) ⊆ M →
@@ -464,17 +326,7 @@ theorem wp_cmpXchg_fail {M : CoPset} (l : Loc) (dq : DFrac) (v' v₁ v₂ : Val)
     WP (Exp.cmpXchg (Exp.val $ Val.lit $ BaseLit.loc l) (Exp.val v₁) (Exp.val v₂))
       @ m ; M {{ Φ }} := by
   simp only [wp_unfold, Exp.denote.eq_18, Exp.isVal, Exp.denote.eq_1]
-  ibubble simp pureBy simp [*] without [backward wpi_wand]
-  -- iintro %Hmask %Hneq %Hcmp Hpt HΦ
-  -- iapply wpi_bind; simp only [←reduceIte]; iapply wpi_pure
-  -- iapply wpi_bind; iapply wpi_pure
-  -- iapply wpi_bind; simp only [Val.loc!]; iapply wpi_pure
-  -- iapply wpi_bind; simp only
-  -- iapply wpi_pure; iapply wpi_bind
-  -- iapply wpi_load! _ _ _ _ _ Hmask $$ Hpt
-  -- simp only [Hcmp, Hneq, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
-  -- iintro Hpt; iapply wpi_step_pure
-  -- iapply m.wand $$ HΦ Hpt
+  ibubble pureBy simp [*]
 
 theorem wp_cmpXchg_suc {M : CoPset} (l : Loc) (v' v₁ v₂ : Val) (Φ : Val → IProp GF) :
     ↑(heapH_inv_name (GF := GF) (Loc := Loc) (Val := Val)) ⊆ M →
@@ -485,41 +337,16 @@ theorem wp_cmpXchg_suc {M : CoPset} (l : Loc) (v' v₁ v₂ : Val) (Φ : Val →
     WP (Exp.cmpXchg (Exp.val $ Val.lit $ BaseLit.loc l) (Exp.val v₁) (Exp.val v₂))
       @ m ; M {{ Φ }} := by
   simp only [wp_unfold, Exp.denote.eq_18, Exp.isVal, Exp.denote.eq_1]
-  ibubble simp pureBy simp [*] without [backward wpi_wand]
-  -- iintro %Hmask %Heq %Hcmp Hpt HΦ; subst Heq
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; simp only [Val.loc!]
-  -- iapply wpi_pure; iapply wpi_bind
-  -- iapply wpi_load! _ _ _ _ _ Hmask $$ Hpt
-  -- simp only [Hcmp, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
-  -- iintro Hpt; iapply wpi_bind
-  -- iapply wpi_store! _ _ _ _ _ Hmask $$ Hpt
-  -- iintro Hpt; iapply wpi_step_pure
-  -- iapply m.wand $$ HΦ Hpt
+  ibubble pureBy simp [*]
 
 theorem wp_faa {M : CoPset} (l : Loc) (i₁ i₂ : Int) (Φ : Val → IProp GF) :
     ↑(heapH_inv_name (GF := GF) (Loc := Loc) (Val := Val)) ⊆ M →
     l ↦ Val.lit (.int i₁) -∗
     m iprop(l ↦ (.lit (.int (i₁ + i₂)) : Val) -∗ Φ (.lit (.int i₁))) -∗
     WP (Exp.faa (.val $ .lit $ .loc l) (.val $ .lit $ .int i₂)) @ m ; M {{ Φ }} := by
-  simp only [wp_unfold, Exp.denote.eq_20, Exp.isVal, ↓reduceIte, Exp.denote.eq_1]
-  ibubble simp pureBy simp [*] without [backward wpi_wand]
-  -- iintro %Hmask Hpt HΦ
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; iapply wp_val
-  -- iapply wpi_bind; simp only [Val.loc!]
-  -- iapply wpi_pure; iapply wpi_bind; simp only [Val.int!]
-  -- iapply wpi_pure; iapply wpi_bind
-  -- iapply wpi_load! _ _ _ _ _ Hmask $$ Hpt; simp only
-  -- iintro Hpt; iapply wpi_bind; iapply wpi_pure; iapply wpi_bind
-  -- iapply wpi_store! _ _ _ _ _ Hmask $$ Hpt
-  -- iintro Hpt; iapply wpi_step_pure
-  -- iapply m.wand $$ HΦ Hpt
+  simp only [wp_unfold, Exp.denote.eq_20, Exp.isVal, Exp.denote.eq_1]
+  ibubble pureBy simp [*]
 
 end heap_rules
 
 end wp_rules
-
-attribute [simp] LawfulMonad.bind_pure_comp
