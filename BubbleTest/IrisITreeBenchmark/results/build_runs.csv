@@ -1,0 +1,16 @@
+variant,run,order,wall_ms
+manual,1,1,8317.775792
+search,1,2,76073.798750
+generated,1,3,9542.018459
+search,2,1,77073.997875
+generated,2,2,9571.647625
+manual,2,3,8325.923042
+generated,3,1,9675.628333
+manual,3,2,8615.317834
+search,3,3,78604.963334
+manual,4,1,8541.817000
+search,4,2,76749.342958
+generated,4,3,9727.306125
+search,5,1,79870.799750
+generated,5,2,10221.070958
+manual,5,3,8707.698500

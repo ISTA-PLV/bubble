@@ -1,7 +1,5 @@
 module
 
-import Bubble
-
 public import BubbleTest.IrisITree.Core.Handler
 public import BubbleTest.IrisITree.Core.Wpi
 public import Iris.ProofMode
@@ -27,38 +25,33 @@ attribute [local simp] bi_close
 
 theorem bi_close_mono (P1 P2 : α → PROP) (a : α) :
     bi_close R P1 a ⊢ (∀ y, P1 y -∗ P2 y) -∗ bi_close R P2 a := by
-  ibubble
-  -- simp [bi_close]
-  -- iintro Hclose Hwand;
-  -- icases Hclose with ⟨%a', %HR, HP1⟩
-  -- iexists a'; isplitr
-  -- · ipureintro; exact HR
-  -- · iapply Hwand $$ HP1
+  simp [bi_close]
+  iintro Hclose Hwand;
+  icases Hclose with ⟨%a', %HR, HP1⟩
+  iexists a'; isplitr
+  · ipureintro; exact HR
+  · iapply Hwand $$ HP1
 
 theorem bi_close_intro (P : α → PROP) (a : α) [Href : Std.Refl R] :
     P a ⊢ bi_close R P a := by
-  ibubble pureBy exact Href.refl _
-  -- simp [bi_close]
-  -- iintro HP
-  -- iexists a; isplitr
-  -- · ipureintro; exact Href.refl
-  -- · iexact HP
+  simp [bi_close]
+  iintro HP
+  iexists a; isplitr
+  · ipureintro; exact Refl.refl a
+  · iexact HP
 
 theorem bi_close_respect (P : α → PROP) [Hsym : Symm R] [Htran : Trans R R R] :
     ∀ {x y : α}, R x y → bi_close R P x ⊣⊢ bi_close R P y := by
-  ibubble pureStop
-  · exact Htran.trans (Hsym.symm _ _ x) H1_5
-  · exact Htran.trans x H1_5
-  -- simp only [bi_close]
-  -- intro x y Hxy
-  -- isplit <;> (
-  --   iintro Hclose; simp [bi_close]; icases Hclose with ⟨%a', %Hra, HP⟩;
-  --   iexists a'; isplitr; ipureintro
-  -- )
-  -- · exact Htran.trans (Hsym.symm x y Hxy) Hra
-  -- · iexact HP
-  -- · exact Htran.trans Hxy Hra
-  -- · iexact HP
+  simp only [bi_close]
+  intro x y Hxy
+  isplit <;> (
+    iintro Hclose; icases Hclose with ⟨%a', %Hra, HP⟩;
+    iexists a'; isplitr; ipureintro
+  )
+  · exact Htran.trans (Hsym.symm x y Hxy) Hra
+  · iexact HP
+  · exact Htran.trans Hxy Hra
+  · iexact HP
 
 end bi_close
 
@@ -74,61 +67,54 @@ attribute [local simp] bi_mono0
 
 theorem bi_mono0_intro0 (P : (α → PROP) → PROP) (Q : α → PROP) :
     P Q ⊢ bi_mono0 P Q := by
-  ibubble
-  -- simp only [bi_mono0]
-  -- iintro HP
-  -- iexists Q; isplitl [HP]
-  -- · iexact HP
-  -- · iintro %x HQ; iexact HQ
+  simp only [bi_mono0]
+  iintro HP
+  iexists Q; isplitl [HP]
+  · iexact HP
+  · iintro %x HQ; iexact HQ
 
-@[ibubble backward 70%]
 theorem bi_mono0_mono (P : (α → PROP) → PROP) (Q1 Q2 : α → PROP) :
     bi_mono0 P Q1 ⊢ (∀ x, Q1 x -∗ Q2 x) -∗ bi_mono0 P Q2 := by
-  ibubble
-  -- simp only [bi_mono0]
-  -- iintro Hm HQ
-  -- icases Hm with ⟨%Q', HP, HQ1⟩
-  -- iexists Q'; isplitl [HP]
-  -- · iexact HP
-  -- · iintro %x HQ'; iapply HQ; iapply HQ1; iapply HQ'
+  simp only [bi_mono0]
+  iintro Hm HQ
+  icases Hm with ⟨%Q', HP, HQ1⟩
+  iexists Q'; isplitl [HP]
+  · iexact HP
+  · iintro %x HQ'; iapply HQ; iapply HQ1; iapply HQ'
 
 theorem bi_mono0_mono_l (P1 P2 : (α → PROP) → PROP) (Q : α → PROP) :
     bi_mono0 P1 Q ⊢ (∀ Q, P1 Q -∗ P2 Q) -∗ bi_mono0 P2 Q := by
-  ibubble
-  -- simp only [bi_mono0]
-  -- iintro Hm HP
-  -- icases Hm with ⟨%Q', HP1, HQ1⟩
-  -- iexists Q'; isplitl [HP HP1]
-  -- · iapply HP $$ %Q' HP1
-  -- · iexact HQ1
+  simp only [bi_mono0]
+  iintro Hm HP
+  icases Hm with ⟨%Q', HP1, HQ1⟩
+  iexists Q'; isplitl [HP HP1]
+  · iapply HP $$ %Q' HP1
+  · iexact HQ1
 
 theorem bi_mono0_elim (P : (α → PROP) → PROP) (Q : α → PROP) :
     bi_mono0 P Q ⊢ (∀ Q Q', (∀ x, Q' x -∗ Q x) -∗ P Q' -∗ P Q) -∗ P Q := by
-  ibubble
-  -- simp only [bi_mono0]
-  -- iintro Hm HP;
-  -- icases Hm with ⟨%Q', HPQ', HQ1⟩
-  -- iapply HP $$ %Q %Q' HQ1 HPQ'
+  simp only [bi_mono0]
+  iintro Hm HP;
+  icases Hm with ⟨%Q', HPQ', HQ1⟩
+  iapply HP $$ %Q %Q' HQ1 HPQ'
 
 theorem bi_mono0_dup (P : (α → PROP) → PROP) (Q : α → PROP) :
     bi_mono0 (bi_mono0 P) Q ⊢ bi_mono0 P Q := by
-  ibubble
-  -- simp only [bi_mono0]
-  -- iintro H
-  -- icases H with ⟨%Q', Houter, HQw⟩
-  -- icases Houter with ⟨%Q'', HP, HQw'⟩
-  -- iexists Q''; isplitl [HP]
-  -- · iexact HP
-  -- · iintro %x HQ''; iapply HQw; iapply HQw' $$ HQ''
+  simp only [bi_mono0]
+  iintro H
+  icases H with ⟨%Q', Houter, HQw⟩
+  icases Houter with ⟨%Q'', HP, HQw'⟩
+  iexists Q''; isplitl [HP]
+  · iexact HP
+  · iintro %x HQ''; iapply HQw; iapply HQw' $$ HQ''
 
 theorem bi_mono0_intro (P : (α → PROP) → PROP) (Q Q' : α → PROP) :
     P Q' ⊢ (∀ x, Q' x -∗ Q x) -∗ bi_mono0 P Q := by
-  ibubble
-  -- simp only [bi_mono0]
-  -- iintro HP HQ
-  -- iexists Q'; isplitl [HP]
-  -- · iexact HP
-  -- · iexact HQ
+  simp only [bi_mono0]
+  iintro HP HQ
+  iexists Q'; isplitl [HP]
+  · iexact HP
+  · iexact HQ
 
 end bi_mono0
 
@@ -159,26 +145,23 @@ instance lfp_tpF_ne : NonExpansive (lfp_tpF F) where
     refine sep_ne.ne .rfl $ forall_ne λ Ms' => ?_
     exact wand_ne.ne .rfl $ Hfg ⟨Ms' ++ Ms.car.eraseIdx i⟩
 
-@[ibubble backward 70%]
 theorem lfp_tpF_mono (tp1 tp2 : DiscreteO (List ((α → PROP) → PROP)) → PROP) :
     ⊢ □ (∀ Ms, tp1 Ms -∗ tp2 Ms) -∗
       ∀ Ms, lfp_tpF F tp1 Ms -∗ lfp_tpF F tp2 Ms := by
   iintro #Hwand %Ms Htp; unfold lfp_tpF
   iintro %i %M %Hi
   ispecialize Htp $$ %i %M %Hi
-  ibubble
-  -- iapply bi_mono0_mono $$ Htp
-  -- iintro %x ⟨%G, HF, HMS⟩; iexists G; isplitl [HF]
-  -- · iexact HF
-  -- · iintro %Ms HM'; iapply Hwand; iapply HMS $$ HM'
+  iapply bi_mono0_mono $$ Htp
+  iintro %x ⟨%G, HF, HMS⟩; iexists G; isplitl [HF]
+  · iexact HF
+  · iintro %Ms HM'; iapply Hwand; iapply HMS $$ HM'
 
 instance : BIMonoPred (lfp_tpF (PROP := PROP) F) where
   mono_pred := by
-    ibubble
-    -- iintro %Φ %Ψ %HneΦ %HneΨ #Hwand %Ms HΦ
-    -- iapply lfp_tpF_mono F Φ Ψ $$ [] [HΦ] <;> ibubble
-    -- · iexact Hwand
-    -- · iexact HΦ
+    iintro %Φ %Ψ %HneΦ %HneΨ #Hwand %Ms HΦ
+    iapply lfp_tpF_mono F Φ Ψ $$ [] [HΦ]
+    · iexact Hwand
+    · iexact HΦ
   mono_pred_ne.ne n Φ Φ' Hdist := by
     cases Hdist; rfl
 
@@ -199,17 +182,14 @@ attribute [local simp] bi_close
 attribute [local simp] lfp_tp
 attribute [local simp] lfp_tpF
 
-@[ibubble backward 75%]
 theorem lfp_tp_unfold (Ms : List ((α → PROP) → PROP)) :
     lfp_tp F Ms ⊣⊢ lfp_tpF F (λ Ms => lfp_tp F Ms.car) ⟨Ms⟩ :=
   equiv_iff.mp <| least_fixpoint_unfold (lfp_tpF F)
 
-@[ibubble backward 70%]
 theorem lfp_tp_nil : ⊢ (lfp_tp F [] : PROP) := by
   iapply (lfp_tp_unfold F []).mpr
-  ibubble
-  -- simp only [lfp_tpF]
-  -- iintro %i %M %Hi; simp at Hi
+  simp only [lfp_tpF]
+  iintro %i %M %Hi; simp at Hi
 
 attribute [-simp] lfp_tpF
 
@@ -219,12 +199,11 @@ theorem lfp_tp_ind (Φ : DiscreteO (List ((α → PROP) → PROP)) → PROP)
       (∀ Ms, lfp_tp F Ms.car -∗ Φ Ms) := by
   iintro #Hwand %Ms Hlfp
   iapply least_fixpoint_ind (lfp_tpF (PROP := PROP) F)
-    <;> ibubble
-  -- · iintro !> %y Hlfp; iapply Hwand;
-  --   iapply lfp_tpF_mono F $$ [] Hlfp
-  --   iintro !> %Ms Hpre; iapply BI.and_congr_right $$ Hpre
-  --   simp [lfp_tp]
-  -- · simp [lfp_tp]; iexact Hlfp
+  · iintro !> %y Hlfp; iapply Hwand;
+    iapply lfp_tpF_mono F $$ [] Hlfp
+    iintro !> %Ms Hpre; iapply BI.and_congr_right $$ Hpre
+    simp [lfp_tp]
+  · simp [lfp_tp]; iexact Hlfp
 
 attribute [-simp] lfp_tp
 
@@ -255,7 +234,6 @@ theorem perm_pick_erase {β : Type _} {Ms1 Ms2 : List β} {i : Nat} {M : β}
       rcases ih₁ Hj₂ with ⟨j₁, Hj₁, Hperm₁⟩
       exact ⟨j₁, Hj₁, List.Perm.trans Hperm₁ Hperm₂⟩
 
-@[ibubble backward 75%]
 theorem lfp_tpF_perm (Ms1 Ms2 : List ((α → PROP) → PROP))
     (wp1 wp2 : DiscreteO (List ((α → PROP) → PROP)) → PROP)
     (h : Ms1.Perm Ms2) :
@@ -266,35 +244,27 @@ theorem lfp_tpF_perm (Ms1 Ms2 : List ((α → PROP) → PROP))
   iintro Htp Hwp; unfold lfp_tpF; iintro %i %M %Hi
   rcases perm_pick_erase h Hi with ⟨j, Hj, Herase⟩
   ispecialize Htp $$ %j %M %Hj
-  ibubble pureStop
-  exact (List.perm_append_left_iff Ms').2 Herase
-  -- iapply bi_mono0_mono $$ Htp
-  -- iintro %x Hstep; icases Hstep with ⟨%G, HFx, Hcont⟩
-  -- iexists G; isplitl [HFx]; iexact HFx
-  -- iintro %Ms' HM';
-  -- iapply Hwp $$ %⟨Ms' ++ Ms1.eraseIdx j⟩ %⟨Ms' ++ Ms2.eraseIdx i⟩
-  -- · ipureintro; simp; exact (List.perm_append_left_iff Ms').2 Herase
-  -- · iapply Hcont $$ HM'
+  iapply bi_mono0_mono $$ Htp
+  iintro %x Hstep; icases Hstep with ⟨%G, HFx, Hcont⟩
+  iexists G; isplitl [HFx]; iexact HFx
+  iintro %Ms' HM';
+  iapply Hwp $$ %⟨Ms' ++ Ms1.eraseIdx j⟩ %⟨Ms' ++ Ms2.eraseIdx i⟩
+  · ipureintro; simp; exact (List.perm_append_left_iff Ms').2 Herase
+  · iapply Hcont $$ HM'
 
 theorem lfp_tpF_perm_close (Ms1 Ms2 : List ((α → PROP) → PROP))
     (wp : DiscreteO (List ((α → PROP) → PROP)) → PROP)
     (h : Ms1.Perm Ms2) :
     lfp_tpF F wp ⟨Ms1⟩ ⊢
     lfp_tpF F (bi_close (λ a b => a.car.Perm b.car) wp) ⟨Ms2⟩ := by
-  ibubble pureStop
+  iintro Htp; iapply lfp_tpF_perm $$ Htp
   · exact h
-  · exact H1_3.symm
-  -- iintro Htp; iapply lfp_tpF_perm $$ Htp
-  -- · exact h
-  -- · ibubble pureStop
-  --   exact h0_1.symm
-    -- simp only [bi_close]
-    -- iintro %Ns1 %Ns2 %Hperm Hwp;
-    -- iexists Ns1; isplitr
-    -- · ipureintro; exact Hperm.symm
-    -- · iexact Hwp
+  · simp only [bi_close]
+    iintro %Ns1 %Ns2 %Hperm Hwp;
+    iexists Ns1; isplitr
+    · ipureintro; exact Hperm.symm
+    · iexact Hwp
 
-@[ibubble backward 50%]
 theorem lfp_tp_perm (Ms1 Ms2 : List ((α → PROP) → PROP)) (h : Ms1.Perm Ms2) :
     ⊢ lfp_tp F Ms1 -∗ lfp_tp F Ms2 := by
   letI : NonExpansive λ (Ms : DiscreteO (List ((α → PROP) → PROP))) =>
@@ -305,12 +275,11 @@ theorem lfp_tp_perm (Ms1 Ms2 : List ((α → PROP) → PROP)) (h : Ms1.Perm Ms2)
     ⟩
   iintro Htp; irevert %Ms2 %h
   iapply lfp_tp_ind F λ Ms => iprop(∀ Ms2, ⌜Ms.car.Perm Ms2⌝ -∗ lfp_tp F Ms2) $$ [] Htp
-  ibubble with [backward lfp_tpF_perm, backward lfp_tp_unfold]
-  -- iintro !> %Ms1 Htp %Ms2 %Hperm;
-  -- iapply lfp_tp_unfold
-  -- iapply lfp_tpF_perm F Ms1.car _ _ _ Hperm $$ Htp
-  -- iintro %Ns1 %Ns2 %Hperm Hw; icases Hw with ⟨H, -⟩
-  -- iapply H; ipureintro; exact Hperm
+  iintro !> %Ms1 Htp %Ms2 %Hperm;
+  iapply lfp_tp_unfold
+  iapply lfp_tpF_perm F Ms1.car _ _ _ Hperm $$ Htp
+  iintro %Ns1 %Ns2 %Hperm Hw; icases Hw with ⟨H, -⟩
+  iapply H; ipureintro; exact Hperm
 
 theorem lfp_tp_app (Ms1 Ms2 : List ((α → PROP) → PROP)) :
     ⊢ lfp_tp F Ms1 -∗ lfp_tp F Ms2 -∗ lfp_tp F (Ms1 ++ Ms2) := by
@@ -327,7 +296,6 @@ theorem lfp_tp_app (Ms1 Ms2 : List ((α → PROP) → PROP)) :
           refine forall_ne (λ Ms1 => ?_)
           cases Hlst; rfl
       ⟩
-  -- TODO: Try to remove these two have statements
   have Hwrap : ⊢ (∀ (Ms1 : DiscreteO (List ((α → PROP) → PROP))),
     iprop(lfp_tp F Ms1.car -∗ ∀ Ms2, iprop(lfp_tp F Ms2 -∗
       lfp_tp F (Ms1.car ++ Ms2)))) -∗
@@ -381,12 +349,10 @@ theorem lfp_tp_app (Ms1 Ms2 : List ((α → PROP) → PROP)) :
     iapply lfp_tp_perm F _ _ _ $$ Happend
     exact List.perm_append_comm_assoc _ _ _
 
-@[ibubble backward 75%]
 theorem lfp_tp_cons (M : (α → PROP) → PROP) (Ms : List ((α → PROP) → PROP)) :
     ⊢ lfp_tp F [M] -∗ lfp_tp F Ms -∗ lfp_tp F (M :: Ms) := by
   simpa using (lfp_tp_app F [M] Ms)
 
-@[ibubble backward 75%]
 theorem lfp_tp_singleton_mod_elim (M : (α → PROP) → PROP) :
     ⊢ M (λ x => lfp_tp F [λ P => P x]) -∗ lfp_tp F [M] := by
   iintro Hx; iapply lfp_tp_unfold; simp only [lfp_tpF]
@@ -399,14 +365,12 @@ theorem lfp_tp_singleton_mod_elim (M : (α → PROP) → PROP) :
     ispecialize Hlfp $$ %0 %(λ P => P x) %Hlookup
     simp only [List.eraseIdx, List.append_nil]
     iapply bi_mono0_elim $$ Hlfp;
-    ibubble
-    -- iintro %Q %Q' Hwand HQ'
-    -- iapply Hwand $$ HQ'
+    iintro %Q %Q' Hwand HQ'
+    iapply Hwand $$ HQ'
   | succ n => simp at Hi
 
 variable {α : Type _} [OFE α] [OFE.Discrete α]
 
--- TODO: replace the lean' induction with native tactic `iinduction`
 theorem lfp_tp_intro (G : (α → PROP) → (α → PROP)) (x : α) :
     ⊢ bi_least_fixpoint G x -∗ lfp_tp G [λ P => P x] := by
   letI : NonExpansive (fun (x : α) => lfp_tp G [λ P => P x] : α → PROP) := ⟨
@@ -417,19 +381,15 @@ theorem lfp_tp_intro (G : (α → PROP) → (α → PROP)) (x : α) :
 
   have Hlist : ∀ Ms : List ((α → PROP) → PROP),
       ⊢ ([∗list] M ∈ Ms, M (λ x => lfp_tp G [λ P => P x])) -∗ lfp_tp G Ms := by
-    intro Ms
-    induction Ms with
-    | nil =>
-      ibubble
-      -- iintro -; iapply lfp_tp_nil
+    iintro %Ms HMs
+    iinduction Ms with
+    | nil => iapply lfp_tp_nil
     | cons M Ms ih =>
-      iintro HMs
       ihave HMs := BigSepL.bigSepL_cons.mp $$ HMs
-      ibubble
-      -- icases HMs with ⟨HM, HMs⟩
-      -- ihave HM := lfp_tp_singleton_mod_elim G M $$ HM
-      -- iapply lfp_tp_cons G M Ms $$ HM
-      -- iapply ih $$ HMs
+      icases HMs with ⟨HM, HMs⟩
+      ihave HM := lfp_tp_singleton_mod_elim G M $$ HM
+      iapply lfp_tp_cons G M Ms $$ HM
+      iapply ih $$ HMs
   iintro Hlfp; irevert %x Hlfp
   iapply least_fixpoint_iter
   clear this
@@ -445,13 +405,12 @@ theorem lfp_tp_intro (G : (α → PROP) → (α → PROP)) (x : α) :
     · iassumption
     · iintro %Ms HMs
       iinduction Ms with
-      | nil => ibubble
-        -- iapply lfp_tp_nil
-      | cons M Ms IHM => ibubble
-        -- ihave ⟨HM, HMs⟩ := BigSepL.bigSepL_cons.mp $$ HMs
-        -- ihave HM := lfp_tp_singleton_mod_elim G M $$ HM
-        -- iapply lfp_tp_cons G M Ms $$ HM
-        -- iapply IHM $$ HMs
+      | nil => iapply lfp_tp_nil
+      | cons M Ms IHM =>
+        ihave ⟨HM, HMs⟩ := BigSepL.bigSepL_cons.mp $$ HMs
+        ihave HM := lfp_tp_singleton_mod_elim G M $$ HM
+        iapply lfp_tp_cons G M Ms $$ HM
+        iapply IHM $$ HMs
   | succ i => simp at Hi
 
 end lfp_tp_lemmas

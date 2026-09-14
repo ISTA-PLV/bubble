@@ -3,3 +3,5 @@
 
 # Python bytecode caches
 __pycache__/
+BubbleTest/Robustness/result/case_*.lean
+BubbleTest/Robustness/result/*.timing

@@ -1,1 +1,112 @@
-# Bubble
+# Anonymous Bubble artifact snapshot
+
+This directory contains the anonymized implementation and evaluation material for the paper submission.
+
+## Requirements
+
+- [Elan](https://github.com/leanprover/elan), which installs the pinned Lean
+  toolchain automatically
+- Python 3, for generating and running the robustness benchmarks
+- NumPy and Matplotlib, only for plotting benchmark results
+
+The Lean version is fixed in `lean-toolchain`. Readers can download the dependencies directly.
+
+## Build
+
+From this directory, run:
+
+```sh
+lake build
+```
+
+## Evaluation environment
+
+The reported timings were collected on an Apple M3 with 8 CPU cores
+(4 performance and 4 efficiency cores) and 24 GB of memory, running macOS
+26.6.2. With the shared dependencies already built, rebuilding the manual,
+search, and generated IrisITree variants took 8.5 s, 77.7 s, and 9.7 s on
+average, respectively.
+
+## Contents
+
+- `Bubble/` contains the implementation of `ibubble`.
+- `BubbleTest/` contains unit tests and small examples.
+- `BubbleTest/IrisITree/`, `BubbleTest/IrisITreeBubble/`, and
+  `BubbleTest/IrisITreeScript/` contain three versions of IrisITree, a framework
+  for building composable program logics based on Interaction Trees (ITrees):
+  manual proofs, proofs using `ibubble`, and generated scripts, respectively.
+- `BubbleTest/IrisITreeBenchmark/` contains the IrisITree benchmark runner,
+  tactic-counting script, cached samples, and aggregated metrics.
+- `BubbleTest/Robustness/` contains the synthetic resource-contention
+  benchmark generator, runner, plotting script, and benchmark-only Aesop
+  baselines.
+
+## Paper examples
+
+The examples used in Sections 2.1–2.4 and 6 of the paper are collected in
+[`BubbleTest/Example.lean`](BubbleTest/Example.lean). Comments in the file mark
+the corresponding paper sections.
+
+The `wp_store` example from the introduction is available as both a
+[manual proof](BubbleTest/IrisITree/HeapLang/ProgramLogic.lean#L367) and an
+[`ibubble` proof](BubbleTest/IrisITreeBubble/HeapLang/ProgramLogic.lean#L296).
+
+## Robustness benchmark
+
+Compares `ibubble` with `inaive` (Aesop + context-partition enumeration),
+with simp disabled for both.
+
+From this directory, run:
+
+```sh
+python3 -m pip install matplotlib numpy
+lake build BubbleTest.Robustness
+bash BubbleTest/Robustness/run_benchmark.sh
+```
+
+Data and the PNG figure are saved in
+[`BubbleTest/Robustness/result/`](BubbleTest/Robustness/result/).
+The command reuses the included measurements and redraws the figure.
+Runs resume by skipping recorded tactic/size/seed/shuffle combinations.
+Use a new output directory when changing the source or experiment settings.
+To run the experiment from scratch, choose a new output directory:
+
+```sh
+bash BubbleTest/Robustness/run_benchmark.sh --out BubbleTest/Robustness/result-new
+```
+
+Use `bash BubbleTest/Robustness/run_benchmark.sh --help` for experiment options.
+
+## IrisITree benchmark
+
+This benchmark compares three proof variants:
+
+- `IrisITree`: handwritten proofs.
+- `IrisITreeBubble`: proofs using `ibubble`.
+- `IrisITreeScript`: generated proof scripts, replayed without search.
+
+It measures proof size (tactic counts), complete build time, and `ibubble` search time.
+
+From this directory, count tactics with:
+
+```sh
+python3 BubbleTest/IrisITreeBenchmark/count_tactics.py
+```
+
+To reproduce the timing measurements from scratch, first move the included
+results aside, then run five repetitions (from the `bubble/` directory):
+
+```sh
+mv BubbleTest/IrisITreeBenchmark/results BubbleTest/IrisITreeBenchmark/results-original
+bash BubbleTest/IrisITreeBenchmark/run_benchmark.sh 5
+```
+
+Move the included results only once, and choose another backup name if
+`results-original` already exists. The runner builds the required dependencies
+and measures all three proof variants; Lean/Elan and Python 3 must be installed.
+
+Results are saved in `BubbleTest/IrisITreeBenchmark/results/`: `README.md`
+summarizes the results, and the CSV files contain measurements and summary statistics.
+
+To resume an interrupted run, repeat the benchmark command without moving
+`results/`; completed measurements are reused.

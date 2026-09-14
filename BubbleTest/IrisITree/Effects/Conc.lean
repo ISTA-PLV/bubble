@@ -1,7 +1,5 @@
 module
 
-import Bubble
-
 import Iris.ProofMode
 public import BubbleTest.IrisITree.Core.Wpi
 public import ITree.Effects.Conc
@@ -23,14 +21,14 @@ def concH : IHandler PROP concE where
     | .kill, _, _ => iprop(|={∅, ⊤}=> True)
   ihandle_mono := by
     iintro %i %Φ %Φ' %Φs %Φs' HΦwand #Hswand HH
-    cases i <;> ibubble
-    -- · icases HH with ⟨HΦ, HΦs⟩
-    --   ihave HΦ' := HΦwand $$ %ForkResult.parent HΦ
-    --   isplitl [HΦ']
-    --   · iexact HΦ'
-    --   · imod HΦs; imodintro; iapply Hswand; iexact HΦs
-    -- · imod HH; itrivial
-    -- · imod HH; imodintro; imod HH; imodintro; iapply HΦwand $$ [$]
+    cases i
+    · icases HH with ⟨HΦ, HΦs⟩
+      ihave HΦ' := HΦwand $$ %ForkResult.parent HΦ
+      isplitl [HΦ']
+      · iexact HΦ'
+      · imod HΦs; imodintro; iapply Hswand; iexact HΦs
+    · imod HH; itrivial
+    · imod HH; imodintro; imod HH; imodintro; iapply HΦwand $$ [$]
 
 end handler
 
@@ -40,47 +38,36 @@ variable {PROP : Type _} [BI PROP] [BIFUpdate PROP]
   {E : Effect} {H : IHandler PROP E}
   [concE -< E] [Hin : InH concH H]
 
-attribute [local ibubble backward 50%] fupd_mask_intro
-attribute [local ibubble backward 50%] wpi_trigger_bind
-attribute [local ibubble backward 50%] wpi_trigger
-attribute [local simp] concH
-
-@[ibubble backward 75%]
 theorem wpi_kill M (Φ : PUnit → PROP) :
     True -∗ WPi kill @> H; ⊤, M {{Φ}} := by
   unfold kill
-  ibubble pureBy simp
-  -- iintro Ht
-  -- iapply wpi_trigger_bind; simp [concH]
-  -- iapply fupd_mask_intro_subseteq (by simp) $$ [$]
+  iintro Ht
+  iapply wpi_trigger_bind; simp [concH]
+  iapply fupd_mask_intro_subseteq (by simp) $$ [$]
 
-@[ibubble backward 75%]
 theorem wpi_fork M (Φ : PUnit → PROP) :
     Φ ⟨⟩ -∗
     WPi t @> H; ⊤ {{ _v, iprop(True) }} -∗
     WPi fork t @> H; M {{Φ}} := by
   unfold fork
   iintro HΦ Ht; iapply wpi_trigger_bind;
-  ibubble pureBy simp with [backward wpi_wand 50%, backward wpi_bind' 50%]
-  -- simp [concH]
-  -- iapply fupd_mask_intro (by simp); iintro Hm
-  -- isplitr [Ht]
-  -- · imod Hm; iapply wpi_pure $$ [$]
-  -- · imod Ht; imodintro;
-    -- iapply wpi_bind'
-    -- iapply wpi_wand $$ [$]; iintro %_ _
-    -- iapply wpi_kill $$ [$]
+  simp [concH]
+  iapply fupd_mask_intro (by simp); iintro Hm
+  isplitr [Ht]
+  · imod Hm; iapply wpi_pure $$ [$]
+  · imod Ht; imodintro;
+    iapply wpi_bind'
+    iapply wpi_wand $$ [$]; iintro %_ _
+    iapply wpi_kill $$ [$]
 
-@[ibubble backward 75%]
 theorem wpi_yield (Φ : PUnit → PROP) :
     Φ ⟨⟩ -∗
     WPi yield @> H; ⊤ {{Φ}} := by
   unfold yield
-  ibubble pureBy simp
-  -- iintro HΦ
-  -- iapply wpi_trigger; simp [concH]
-  -- iapply fupd_mask_intro_subseteq (by simp)
-  -- iapply fupd_mask_intro_subseteq (by simp) $$ [$]
+  iintro HΦ
+  iapply wpi_trigger; simp [concH]
+  iapply fupd_mask_intro_subseteq (by simp)
+  iapply fupd_mask_intro_subseteq (by simp) $$ [$]
 
 end wpi_rules
 
@@ -127,31 +114,24 @@ instance coneEH_adequate {GE GR} :
       iexists _, _, λ P => P (k .parent),
         Ms ++ [(λ P => iprop(|={⊤, ∅}=> P (k .child)))],
         [λ P => P (k .parent), λ P => iprop(|={⊤, ∅}=> P (k .child))]
-      ibubble pureStop <;> try simp [*]
-      · change _ = List.filterMap _ (s.add (k .child)).pool
-        simp [ConcState.add]
-      · exact Hhandle
-      -- simp [h, ConcState.add]
-      -- isplitr; itrivial
-      -- isplitr; itrivial
-      -- simp; iframe; isplitr
-      -- · ipureintro; simp [h, ConcState.add]
-      -- · iintro %_ $
+      simp [h]
+      isplitr; itrivial
+      isplitr; itrivial
+      iframe; isplitr
+      · ipureintro; simp [ConcState.add]
+      · iintro %_ $
     · -- Kill case
       iintro Ht %h; rcases Hhandle with ⟨i, t', hi, Hget, HC⟩; imodintro
       let f := λ t (P: (ITree GE GR → PROP)) => iprop(|={⊤, ∅}=> P t)
       iexists t', ConcState.yield s.pool i hi, f t',
         (ConcState.yield s.pool i hi).pool.filterMap (Option.map f), []
-      ibubble pureStop <;> try simp [*]
-      · simpa [f, ConcState.yield] using filterMap_set_perm f s.pool i (some t') none hi Hget
-      · rfl
-      -- isplitr; ipureintro; exact HC
-      -- isplitr; ipureintro
-      -- simpa [f, ConcState.yield, h] using
-      --   filterMap_set_perm f s.pool i (some t') none hi Hget
-      -- isplitr; simp; exact .rfl
-      -- isplitr; ipureintro; congr
-      -- simp [f]; imod Ht; iintro %P $
+      isplitr; ipureintro; exact HC
+      isplitr; ipureintro
+      simpa [f, ConcState.yield, h] using
+        filterMap_set_perm f s.pool i (some t') none hi Hget
+      isplitr; simp; exact .rfl
+      isplitr; ipureintro; congr
+      simp [f]; imod Ht; iintro %P $
     · -- Yield case
       iintro >Ht %h; rcases Hhandle with ⟨i, t', hi, Hget, HC⟩
       iapply fupd_mask_intro (by simp); iintro Hemp
@@ -160,21 +140,14 @@ instance coneEH_adequate {GE GR} :
       have hi' : i < tp'.length := by simpa [tp'] using hi
       iexists t', ConcState.yield tp' i hi', f t',
         (ConcState.yield tp' i hi').pool.filterMap (Option.map f), [f (k ⟨⟩)]
-      ibubble pureStop <;> try simp [*]
-      · apply HC
-      · simpa [f, ConcState.yield, tp', h] using
+      isplitr; ipureintro; exact HC
+      isplitr; ipureintro
+      simpa [f, ConcState.yield, tp', h] using
         (filterMap_set_perm f tp' i (some t') none hi' Hget).trans
           (filterMap_set_perm f s.pool s.curr none (some (k ⟨⟩))
             s.curr_in_pool s.curr_is_none)
-      · rfl
-      -- isplitr; ipureintro; exact HC
-      -- isplitr; ipureintro
-      -- simpa [f, ConcState.yield, tp', h] using
-      --   (filterMap_set_perm f tp' i (some t') none hi' Hget).trans
-      --     (filterMap_set_perm f s.pool s.curr none (some (k ⟨⟩))
-      --       s.curr_in_pool s.curr_is_none)
-      -- isplitl [Ht]; simp [f]; iframe
-      -- isplitr; ipureintro; congr
-      -- simp [f]; imod Hemp; iintro %x $
+      isplitl [Ht]; simp [f]; iframe
+      isplitr; ipureintro; congr
+      simp [f]; imod Hemp; iintro %x $
 
 end exec

@@ -1,0 +1,102 @@
+[
+  {
+    "layer": "Core",
+    "files": 5,
+    "search_commands": 69,
+    "manual": {
+      "iris": 565,
+      "lean": 397,
+      "total": 962,
+      "ibubble_commands": 0
+    },
+    "search": {
+      "iris": 251,
+      "lean": 359,
+      "total": 610,
+      "ibubble_commands": 69
+    },
+    "generated": {
+      "iris": 1014,
+      "lean": 498,
+      "total": 1512,
+      "ibubble_commands": 0
+    },
+    "iris_reduction_percent": 55.575221238938056,
+    "total_reduction_percent": 36.59043659043659
+  },
+  {
+    "layer": "Effects",
+    "files": 9,
+    "search_commands": 48,
+    "manual": {
+      "iris": 313,
+      "lean": 201,
+      "total": 514,
+      "ibubble_commands": 0
+    },
+    "search": {
+      "iris": 132,
+      "lean": 176,
+      "total": 308,
+      "ibubble_commands": 48
+    },
+    "generated": {
+      "iris": 545,
+      "lean": 302,
+      "total": 847,
+      "ibubble_commands": 0
+    },
+    "iris_reduction_percent": 57.82747603833866,
+    "total_reduction_percent": 40.07782101167315
+  },
+  {
+    "layer": "HeapLang",
+    "files": 2,
+    "search_commands": 33,
+    "manual": {
+      "iris": 237,
+      "lean": 87,
+      "total": 324,
+      "ibubble_commands": 0
+    },
+    "search": {
+      "iris": 44,
+      "lean": 68,
+      "total": 112,
+      "ibubble_commands": 33
+    },
+    "generated": {
+      "iris": 245,
+      "lean": 119,
+      "total": 364,
+      "ibubble_commands": 0
+    },
+    "iris_reduction_percent": 81.43459915611814,
+    "total_reduction_percent": 65.4320987654321
+  },
+  {
+    "layer": "TOTAL",
+    "files": 16,
+    "search_commands": 150,
+    "manual": {
+      "iris": 1115,
+      "lean": 685,
+      "total": 1800,
+      "ibubble_commands": 0
+    },
+    "search": {
+      "iris": 427,
+      "lean": 603,
+      "total": 1030,
+      "ibubble_commands": 150
+    },
+    "generated": {
+      "iris": 1804,
+      "lean": 919,
+      "total": 2723,
+      "ibubble_commands": 0
+    },
+    "iris_reduction_percent": 61.70403587443946,
+    "total_reduction_percent": 42.77777777777778
+  }
+]

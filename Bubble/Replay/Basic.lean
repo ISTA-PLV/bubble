@@ -19,6 +19,13 @@ private def mkPickGoal (goalPos : Nat) : MetaM (TSyntax `tactic) := do
   let posLit := mkOneBasedNumLit goalPos
   `(tactic| pick_goal $posLit:num)
 
+private def mkRotateLeft (n : Nat) : MetaM (TSyntax `tactic) := do
+  if n == 1 then
+    `(tactic| rotate_left)
+  else
+    let nLit : NumLit := Syntax.mkNumLit (toString n)
+    `(tactic| rotate_left $nLit:num)
+
 structure ScriptStep where
   preState : Meta.SavedState
   preGoal : MVarId
@@ -51,6 +58,49 @@ def pickGoal (s : TacticState) (idx : Nat) : TacticState :=
           s.goals.extract (idx + 1) s.goals.size }
     | none => s
 
+def rotateLeft (s : TacticState) (n : Nat) : TacticState :=
+  if n == 0 || s.goals.isEmpty then s
+  else
+    let n := n % s.goals.size
+    { goals := s.goals.extract n s.goals.size ++ s.goals.extract 0 n }
+
+private def retainOpenCurrent (s : TacticState) : MetaM TacticState := do
+  return { goals := ← s.goals.filterM λ goal =>
+    not <$> goal.isAssignedOrDelayedAssigned }
+
+/-- Emit a final permutation so that replacing `ibubble?` with its suggestion
+leaves residual goals in the same order as the tactic invocation. -/
+def renderFinalOrder (s : TacticState) (target : Array MVarId) :
+    MetaM (Array (TSyntax `tactic)) := do
+  let mut state ← s.retainOpenCurrent
+  let target ← target.filterM λ goal =>
+    not <$> goal.isAssignedOrDelayedAssigned
+  unless state.goals.size == target.size && target.all state.goals.contains do
+    throwError "ibubble?: generated script has a different set of residual goals"
+  if state.goals == target then return #[]
+
+  /- Prefer one rotation when the residual order differs only cyclically. This
+     is the usual `pureStop` case: each `ipureintro` defers one pure goal. -/
+  for pos in [1:state.goals.size] do
+    if (state.rotateLeft pos).goals == target then
+      return #[(← mkRotateLeft pos)]
+
+  /- Fall back to a general permutation by moving target goals to the front in
+     reverse order. -/
+  let mut tactics := #[]
+  for goal in target.reverse do
+    /- Residual arrays can contain the same metavariable more than once. Taking
+       the last occurrence makes the reverse insertion algorithm stable. -/
+    let some reverseIdx := state.goals.reverse.idxOf? goal
+      | throwError "ibubble?: generated script could not locate a residual goal"
+    let idx := state.goals.size - reverseIdx - 1
+    if idx > 0 then
+      tactics := tactics.push (← mkPickGoal idx)
+      state := state.pickGoal idx
+  unless state.goals == target do
+    throwError "ibubble?: generated script could not restore residual goal order; got {state.goals.map (·.name)}, expected {target.map (·.name)}"
+  return tactics
+
 def applyStepAtHead (s : TacticState) (step : ScriptStep) : TacticState :=
   { goals := step.postGoals ++ s.goals.extract 1 s.goals.size }
 
@@ -68,19 +118,23 @@ def render (acc : Array (TSyntax `tactic)) (step : ScriptStep)
   /- Metavariable goals can be solved indirectly while replaying a sibling. -/
   let tacticState ← tacticState.retainOpen step.preState
   let pos ← tacticState.getVisibleGoalIndex step.preGoal
-  let tacticState ← tacticState.applyStep step
-  let acc ←
+  let focusTactic? ←
     if pos == 0 then
-      pure acc
+      pure none
+    else if pos + 1 == tacticState.goals.size then
+      pure (some (← mkRotateLeft pos))
     else
-      pure (acc.push (← mkPickGoal pos))
+      pure (some (← mkPickGoal pos))
+  let tacticState ← tacticState.applyStep step
+  let acc := focusTactic?.elim acc acc.push
   return (acc.push step.tactic, tacticState)
 
 end ScriptStep
 
 namespace UScript
 
-def render (s : UScript) (rootGoal : MVarId) :
+def render (s : UScript) (rootGoal : MVarId)
+    (finalGoals? : Option (Array MVarId) := none) :
     MetaM (Array (TSyntax `tactic)) := do
   let mut script := Array.mkEmpty s.size
   let mut tacticState : TacticState := { goals := #[rootGoal] }
@@ -88,11 +142,14 @@ def render (s : UScript) (rootGoal : MVarId) :
     let (script', tacticState') ← step.render script tacticState
     script := script'
     tacticState := tacticState'
+  if let some finalGoals := finalGoals? then
+    script := script ++ (← tacticState.renderFinalOrder finalGoals)
   return script
 
-def renderTacticSeq (s : UScript) (rootGoal : MVarId) :
+def renderTacticSeq (s : UScript) (rootGoal : MVarId)
+    (finalGoals? : Option (Array MVarId) := none) :
     MetaM (TSyntax ``tacticSeq) := do
-  `(tacticSeq| $(← s.render rootGoal):tactic*)
+  `(tacticSeq| $(← s.render rootGoal finalGoals?):tactic*)
 
 end UScript
 

@@ -1,0 +1,14 @@
+layer,file,runs,calls_per_run,mean_search_total_ms,mean_wall_ms,median_wall_ms,min_wall_ms,max_wall_ms
+Core,BubbleTest/IrisITreeBubble/Core/Exec.lean,5,22,6718.058342,7981.118108,7956.667750,7803.666291,8182.492500
+Core,BubbleTest/IrisITreeBubble/Core/Handler.lean,5,9,2538.222283,3862.811658,4472.086583,2882.148541,4525.149042
+Core,BubbleTest/IrisITreeBubble/Core/Wpi.lean,5,55,36044.658616,38388.013908,30940.015750,29491.720083,50930.421625
+Core,BubbleTest/IrisITreeBubble/Core/WpiExec.lean,5,14,12113.377609,13854.165092,15496.207208,9754.544041,17747.024959
+Effects,BubbleTest/IrisITreeBubble/Effects/Angelic.lean,5,4,992.037767,2227.258842,1810.590750,1786.954250,3922.178833
+Effects,BubbleTest/IrisITreeBubble/Effects/Conc.lean,5,10,10307.000092,11334.335692,11345.212625,11289.471916,11353.604292
+Effects,BubbleTest/IrisITreeBubble/Effects/Demonic.lean,5,4,889.191925,1659.499350,1644.956709,1635.935917,1709.807084
+Effects,BubbleTest/IrisITreeBubble/Effects/Fail.lean,5,4,160.848508,931.953675,929.070875,922.810125,942.838500
+Effects,BubbleTest/IrisITreeBubble/Effects/Halt.lean,5,5,264.244926,1008.552108,1007.901375,993.617541,1020.364750
+Effects,BubbleTest/IrisITreeBubble/Effects/Heap.lean,5,12,9933.327617,11319.862817,11255.416583,11202.471708,11505.236875
+Effects,BubbleTest/IrisITreeBubble/Effects/State.lean,5,5,16170.056450,16984.795783,16957.687750,16931.103708,17057.726667
+Effects,BubbleTest/IrisITreeBubble/Effects/Step.lean,5,9,2289.936117,3107.237533,3109.270208,3098.193125,3117.833125
+HeapLang,BubbleTest/IrisITreeBubble/HeapLang/ProgramLogic.lean,5,76,29194.668300,31109.105550,31107.490750,30653.111958,31504.501166

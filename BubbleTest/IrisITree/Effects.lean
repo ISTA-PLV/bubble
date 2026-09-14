@@ -1,7 +1,5 @@
 module
 
-import Bubble
-
 public import BubbleTest.IrisITree.Effects.Empty
 public import BubbleTest.IrisITree.Effects.Step
 public import BubbleTest.IrisITree.Effects.Fail

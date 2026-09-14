@@ -41,7 +41,8 @@ def introStep : Step where
   run input := do
     if let some result ← persistIntro? input.goal then
       return result
-    let names ← collectIrisHypNames input.goal
+    let names := (← collectIrisHypNames input.goal) ++
+      (← collectLocalUserNames input.goal)
 
     /- Introduce an Iris forall binder as a pure Lean variable. -/
     let forallBinder? ← input.goal.withContext do
@@ -50,7 +51,12 @@ def introStep : Step where
       matchForall? irisGoal.goal
     if let some binderName? := forallBinder? then
       let name ← match binderName? with
-        | some name => mkBinderFromName name
+        | some name =>
+            let name := name.eraseMacroScopes
+            if names.contains name then
+              mkFreshLeanBinderFromNames names input.depth
+            else
+              mkBinderFromName name
         | none => mkFreshLeanBinderFromNames names input.depth
       let pattern ← parseICasesPat <| ← mkPurePatSyntax name
       return ← runIntroPat input.goal (.intro pattern)

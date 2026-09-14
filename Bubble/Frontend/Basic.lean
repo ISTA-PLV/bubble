@@ -36,9 +36,11 @@ syntax "forward" : ibubbleRuleDirection
 
 declare_syntax_cat ibubbleLocalRule
 syntax ibubbleRuleDirection ppSpace ident (ppSpace num "%")? : ibubbleLocalRule
+syntax ident (ppSpace num "%")? : ibubbleLocalRule
 
 declare_syntax_cat ibubbleErasedRule
 syntax ibubbleRuleDirection ppSpace ident : ibubbleErasedRule
+syntax ident : ibubbleErasedRule
 
 declare_syntax_cat ibubbleRuleEdit
 syntax "with" "[" ibubbleLocalRule,* "]" : ibubbleRuleEdit

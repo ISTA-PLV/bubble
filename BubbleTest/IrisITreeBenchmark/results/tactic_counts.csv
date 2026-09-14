@@ -1,0 +1,5 @@
+layer,files,search_commands,manual_iris,search_iris,iris_reduction_percent,generated_iris,manual_all,search_all,all_reduction_percent,generated_all
+Core,5,69,565,251,55.575221,1014,962,610,36.590437,1512
+Effects,9,48,313,132,57.827476,545,514,308,40.077821,847
+HeapLang,2,33,237,44,81.434599,245,324,112,65.432099,364
+TOTAL,16,150,1115,427,61.704036,1804,1800,1030,42.777778,2723

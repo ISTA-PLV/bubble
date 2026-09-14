@@ -1,7 +1,5 @@
 module
 
-import Bubble
-
 import Iris.ProofMode
 public import BubbleTest.IrisITree.Core.Handler
 public import ITree

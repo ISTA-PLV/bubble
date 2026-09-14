@@ -108,6 +108,19 @@ example [BI PROP] (P Q : Nat → PROP) :
     (P 1 -∗ P 2 -∗ Q 1) ⊢ □ P 1 -∗ P 2 -∗ Q 1 := by
   ibubble
 
+/- A unary `iapply` suggestion explicitly records the spatial context given to
+its sole child. -/
+/--
+info: Try this:
+
+  [apply] iapply Hwand $$ [ HP ]
+    iexact HP
+-/
+#guard_msgs in
+example [BI PROP] (P Q : PROP) : □ (P -∗ Q) -∗ P -∗ Q := by
+  iintro #Hwand HP
+  ibubble?
+
 /-- Tests `ispecialize` with named subgoal -/
 @[ibubble backward 100%]
 example [BI PROP] (Q : PROP) (φ : Prop) (hφ : φ):

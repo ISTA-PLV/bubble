@@ -77,7 +77,8 @@ private partial def followForwardPath (bubble : Bubble) (path : Array RappId)
 
   /- The end of the single-platform chain has not been reached; move down one more step. -/
   if !tail.isEmpty || children?.isNone then
-    let (irisGoals, localRemaining) ← replayRuleApplication focus goal rappRef #[] 1
+    let (irisGoals, localRemaining) ←
+      replayRuleApplication focus goal rappRef #[] 1 (some bubble.consumed)
     let plat ← rapp.children.get
     unless plat.kind.isSingle do throwError
       "ibubble: forward path expected Rapp {rapp.id} to have a single platform"
@@ -133,7 +134,13 @@ def replayProof (config : SearchConfig) (rootBubble : BubbleId) :
 
   /- When suffixed with `?`, the tactic provides a script through the `Try this` interface. -/
   if config.generateScript? then
-    let tactics ← state.script.render root.preNormGoal
+    /- `evalIBubble` exposes independent goals before goals that depend on other
+       metavariables. The replacement script must leave them in that same order. -/
+    let dependees ← remaining.foldlM (init := ∅) λ m g => do
+      return m ∪ (← g.getMVarDependencies)
+    let (dependent, independent) := remaining.partition dependees.contains
+    let finalGoals := independent ++ dependent
+    let tactics ← state.script.render root.preNormGoal (some finalGoals)
     let ref ← getRef
     addTryThisTacticSeqSuggestion ref tactics
   return remaining

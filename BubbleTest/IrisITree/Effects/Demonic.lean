@@ -1,7 +1,5 @@
 module
 
-import Bubble
-
 import Iris.ProofMode
 public import ITree.Effects.Demonic
 public import BubbleTest.IrisITree.Core.Wpi
@@ -20,17 +18,15 @@ variable {PROP : Type _} [BI PROP]
 def demonicH (α : Type _) : IHandler PROP (demonicE α) where
   ihandle := λ _ Φ _ => iprop(∀ a, Φ a)
   ihandle_mono := by
-    ibubble
-    -- iintro %i %Φ %Φ' %s %s' HΦwand #Hswand H %a
-    -- iapply HΦwand; iapply H
+    iintro %i %Φ %Φ' %s %s' HΦwand #Hswand H %a
+    iapply HΦwand; iapply H
 
 instance demonicH_sequential {α : Type _} :
     Sequential (PROP := PROP) (demonicH (PROP := PROP) α) := by
   constructor
   unfold demonicH
-  ibubble
-  -- iintro %i %Φ %s H
-  -- iexact H
+  iintro %i %Φ %s H
+  iexact H
 
 end handler
 
@@ -40,21 +36,16 @@ variable {PROP : Type _} [BI PROP] [BIFUpdate PROP] {E : Effect}
   {H : IHandler PROP E} {α : Type _}
   [sub : demonicE α -< E] [Hin : InH (demonicH (PROP := PROP) α) H]
 
-attribute [local ibubble backward 75%] wpi_trigger
-attribute [local ibubble backward 50%] fupd_mask_intro
-attribute [local simp] demonicH
-
 theorem wpi_demonic (M : CoPset) (Φ : α → Prop) [Hdec : DecidablePred Φ]
     [Hi: Inhabited {a // Φ a}] (Ψ : {a // Φ a} → PROP) :
     (∀ a, Ψ a) ⊢ WPi choose Φ @> H;M {{ Ψ }} := by
   unfold choose
-  ibubble pureBy simp
-  -- iintro HΨ;
-  -- iapply wpi_trigger; simp [demonicH]
-  -- iapply fupd_mask_intro
-  -- · simp
-  -- iintro Hclose; iintro %a
-  -- imod Hclose; imodintro; iapply HΨ
+  iintro HΨ;
+  iapply wpi_trigger; simp [demonicH]
+  iapply fupd_mask_intro
+  · simp
+  iintro Hclose; iintro %a
+  imod Hclose; imodintro; iapply HΨ
 
 end wpi_rules
 
@@ -62,20 +53,15 @@ section exec
 
 open ITree.Exec IrisITree.Core
 
-attribute [local simp] demonicH
-attribute [local simp] demonicEH
-
 instance demonicEH_adequate {PROP : Type _} [BI PROP] [BIFUpdate PROP] {α : Type _} :
     SEHandlerAdequate (demonicH (PROP := PROP) α) (demonicEH α) where
   inv _ := iprop(emp)
   adequate := by
     intro i s C Φ1 Φ2 ⟨a, s', HC⟩
-    ibubble pureStop <;> try simp
-    exact HC
-    -- simp [demonicH] at ⊢
-    -- iintro HΦ1 Hinv; imodintro
-    -- iexists ⟨a, s'⟩; iexists s; iframe
-    -- isplitr; itrivial
-    -- iapply HΦ1
+    simp [demonicH] at ⊢
+    iintro HΦ1 Hinv; imodintro
+    iexists ⟨a, s'⟩; iexists s; iframe
+    isplitr; itrivial
+    iapply HΦ1
 
 end exec

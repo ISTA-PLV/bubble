@@ -48,6 +48,26 @@ example (ℓ₁ ℓ₂ ℓ₃ : Nat) :
     ready ∗ (ℓ₃ ↦ 3) := by
   ibubble
 
+example (ℓ₁ ℓ₂ ℓ₃ : Nat) :
+    (ℓ₁ ↦ 1) ∨ (ℓ₂ ↦ 2) -∗
+    ℓ₃ ↦ 3 -∗
+    □ (ℓ₁ ↦ 1 -∗ ready) -∗
+    □ (ℓ₂ ↦ 2 -∗ ready) -∗
+    ready ∗ (ℓ₃ ↦ 3) := by
+  iintro H0_1
+  iintro H0_2
+  iintro H0_3
+  iintro H0_4
+  icases H0_3 with #H0_5
+  icases H0_4 with #H0_6
+  isplitl [H0_1]
+  icases H0_1 with (Hcase1L | Hcase1R)
+  iapply H0_5 $$ [Hcase1L]
+  iexact Hcase1L
+  iapply H0_6 $$ [Hcase1R]
+  iexact Hcase1R
+  iexact H0_2
+
 /-- Section 6: two subgoals share an unknown proposition and form a dependent group. -/
 example (req : PROP → PROP) (ℓ₁ ℓ₂ ℓ₃ : Nat) :
     □ (∀ P : PROP, req P -∗ P -∗ (ℓ₃ ↦ 3) -∗ ready) -∗

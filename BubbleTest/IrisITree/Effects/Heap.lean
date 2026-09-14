@@ -1,7 +1,5 @@
 module
 
-import Bubble
-
 public import BubbleTest.IrisITree.Effects.State
 public import BubbleTest.IrisITree.Effects.Demonic
 public import BubbleTest.IrisITree.Effects.Fail
@@ -19,8 +17,6 @@ namespace IrisITree.Effects
 
 open Iris BI ITree Effects Core
 
--- TODO: Why can’t we make this universe-polymorphic? `Loc` and `Val` should have type `Type _`
--- The restriction seems to come from `GhostMapG`; More concretely, `constOF` is too conservative.
 class heapHGpreS (GF : BundledGFunctors) (Loc Val : Type)
     [Ord Loc] [Std.TransOrd Loc] [Std.LawfulEqOrd Loc] where
   heapH_ghost_varG : GhostMapG GF Loc (Option Val) (Std.ExtTreeMap Loc · compare)
@@ -85,8 +81,6 @@ variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF]
 variable {Loc Val : Type} [Ord Loc] [Std.TransOrd Loc] [Std.LawfulEqOrd Loc] [DecidableEq Loc]
 variable [Gpre : heapHGpreS GF Loc Val]
 
-attribute [local simp] heap_inv heapH_inv_name stateInterp_heap pointsto
-
 -- TODO: find way to eliminate the parameter M and use the syntax sugar instead of `bigSepM`
 theorem heapH_init  (σ : heapE.T Loc Val) :
     ⊢ |={∅}=> ∃ G : heapHGS GF Loc Val,
@@ -97,18 +91,16 @@ theorem heapH_init  (σ : heapE.T Loc Val) :
   imod Hgmap; icases Hgmap with ⟨%γ, ⟨⟨Hauth, Hauth'⟩, Hfrag⟩⟩
   imod (inv_alloc ((nroot.@"heapH").@"") ∅
     (∃ σ, ghost_map_auth (K := Loc) (V := Option Val) γ (.own $ .half 1) σ)) $$ [Hauth] with #Hinv
-  · ibubble
-    -- inext; iexists σ; iassumption
+  · inext; iexists σ; iassumption
   · imodintro; iexists ⟨Gpre, γ, ""⟩
-    ibubble
-    -- unfold heap_inv heapH_inv_name stateInterp_heap pointsto
-    -- unfold heap_inv heapH_inv_name
-    -- isplitr
-    -- · iassumption
-    -- isplitl [Hauth']
-    -- · isplit; iassumption
-    --   iassumption
-    -- · iframe
+    unfold heap_inv heapH_inv_name stateInterp_heap pointsto
+    unfold heap_inv heapH_inv_name
+    isplitr
+    · iassumption
+    isplitl [Hauth']
+    · isplit; iassumption
+      iassumption
+    · iframe
 
 end initialization
 
@@ -120,10 +112,7 @@ variable [G : heapHGS GF Loc Val]
 variable {E : Effect} {H : IHandler (IProp GF) E}
 variable [heapE Loc Val -< E] [InH (heapH (G := G)) H]
 
-attribute [local simp] Option.join_some
-
 -- Note: we can extend the following theorems to `Ms,Me` version by having `|={Ms,Me}=> Φ v`
-@[ibubble backward 75%]
 theorem wpi_storeOpt M (l : Loc) (v v' : Option Val) (Φ : Option Val → IProp GF) :
     ↑(heapH_inv_name (G := G)) ⊆ M →
     l ↦? v -∗
@@ -136,8 +125,7 @@ theorem wpi_storeOpt M (l : Loc) (v v' : Option Val) (Φ : Option Val → IProp 
   imod inv_acc_timeless Hmask $$ Hinv with ⟨⟨%σinv, HauthInv⟩, Hclose⟩
   ihave %Heq := ghost_map_auth_agree $$ HauthInv HauthState; subst σinv
   imodintro; isplitl [HauthState]
-  · ibubble
-    -- iframe; iframe Hinv
+  · iframe; iframe Hinv
 
   -- look up and insert operations
   ihave %Hlookup := ghost_map_lookup $$ HauthInv Hpt
@@ -158,24 +146,20 @@ theorem wpi_storeOpt M (l : Loc) (v v' : Option Val) (Φ : Option Val → IProp 
   imod Hclose $$ [Hauth'] with -
   · iexists Std.insert (M := (Std.ExtTreeMap Loc · compare)) σ l v'
     iexact Hauth'
-  ibubble
-  -- imodintro; isplitl [Hauth]
-  -- · isplit <;> iassumption
-  -- iapply wpi_pure;
-  -- iapply Hwand $$ [$]
+  imodintro; isplitl [Hauth]
+  · isplit <;> iassumption
+  iapply wpi_pure;
+  iapply Hwand $$ [$]
 
-@[ibubble backward 75%]
 theorem wpi_store? M (l : Loc) (v : Option Val) (v' : Val) (Φ : Option Val → IProp GF) :
     ↑(heapH_inv_name (G := G)) ⊆ M →
     l ↦? v -∗
     (l ↦ v' -∗ Φ v) -∗
     WPi (store? l v') @> H; M {{ Φ }} := by
   unfold store?
-  ibubble
-  -- iintro %Hmask Hpt Hwand;
-  -- iapply wpi_storeOpt _ _ _ _ _ Hmask $$ Hpt Hwand
+  iintro %Hmask Hpt Hwand;
+  iapply wpi_storeOpt _ _ _ _ _ Hmask $$ Hpt Hwand
 
-@[ibubble backward 75%]
 theorem wpi_load? M (l : Loc) (v : Val) (dq : DFrac) (Φ : Option Val → IProp GF) :
     ↑(heapH_inv_name (G := G)) ⊆ M →
     l ↦{dq} v -∗
@@ -189,47 +173,41 @@ theorem wpi_load? M (l : Loc) (v : Val) (dq : DFrac) (Φ : Option Val → IProp 
   ihave %Hlookup := ghost_map_lookup $$ Hauth Hpt
   have Hlookup : σ[l]? = some (some v) := by
     simpa [Iris.Std.get?] using Hlookup
-  -- rw [Hlookup]; simp only [Option.join_some]
+  rw [Hlookup]
+  simp only [Option.join_some]
 
-  ibubble
-  -- iframe; iframe Hinv
-  -- imodintro; iapply wpi_pure
-  -- iapply Hwand $$ [$]
+  iframe; iframe Hinv
+  imodintro; iapply wpi_pure
+  iapply Hwand $$ [$]
 
 section fail
 
 variable [failE -< E]
 
-attribute [local ibubble backward 75%] wpi_bind
-
-@[ibubble backward 75%]
 theorem wpi_store! M (l : Loc) (v v' : Val) (Φ : Val → IProp GF) :
     ↑(heapH_inv_name (G := G)) ⊆ M →
     l ↦ v -∗
     (l ↦ v' -∗ Φ v) -∗
     WPi (store! l v') @> H; M {{ Φ }} := by
   unfold store!
-  ibubble
-  -- iintro %Hmask Hpt Hwand;
-  -- iintro Hpt; iapply wpi_pure; iapply Hwand $$ [$]
+  iintro %Hmask Hpt Hwand;
+  iapply wpi_bind; iapply wpi_store? $$ [$]
+  · exact Hmask
+  · iintro Hown; simp; iapply wpi_pure
+    iapply Hwand $$ [$]
 
-@[ibubble backward 75%]
 theorem wpi_load! M (l : Loc) (v : Val) (dq : DFrac) (Φ : Val → IProp GF) :
     ↑(heapH_inv_name (G := G)) ⊆ M →
     l ↦{dq} v -∗
     (l ↦{dq} v -∗ Φ v) -∗
     WPi (load! l) @> H; M {{ Φ }} := by
   unfold load!
-  ibubble
-  -- iintro %Hmask Hpt Hwand;
-  -- iapply wpi_bind; iapply wpi_load? _ _ _ _ _ Hmask $$ Hpt
-  -- iintro Hpt; iapply wpi_pure; iapply Hwand $$ Hpt
+  iintro %Hmask Hpt Hwand;
+  iapply wpi_bind; iapply wpi_load? _ _ _ _ _ Hmask $$ Hpt
+  iintro Hpt; iapply wpi_pure; iapply Hwand $$ Hpt
 
 end fail
 
--- TODO: why we use `Int` here instead of `Nat`, given that locations are already monotonically ordered?
--- TODO: unify the notation for int, `i : Int` and `Int.ofNat i` are different
--- TODO: upstream?
 class LawfulLoc (Loc : Type) [Ord Loc] extends Zero Loc, HAdd Loc Int Loc where
   decEq : DecidableEq Loc
   add_zero (l : Loc) : l + (0 : Int) = l
@@ -238,7 +216,6 @@ class LawfulLoc (Loc : Type) [Ord Loc] extends Zero Loc, HAdd Loc Int Loc where
     ¬(compare (l + (1 : Int) + (m : Int)) l).isLE = true
 
 attribute [reducible, instance] LawfulLoc.decEq
-attribute [simp] LawfulLoc.add_zero
 
 theorem extTreeMap_insertMany_eq_ofList_union {K : Type _} {V : Type _}
     [Ord K] [Std.TransOrd K] [Std.LawfulEqOrd K] [DecidableEq K]
@@ -276,7 +253,6 @@ variable [LawfulLoc Loc]
 
 attribute [local simp] pointsto
 
-@[ibubble backward 75%]
 theorem wpi_allocN M (n : Nat) (v : Val) (Φ : Loc → IProp GF) :
     ↑(heapH_inv_name (G := G)) ⊆ M →
     (∀ l : Loc, ([∗list] i ∈ .range n, (l + Int.ofNat i) ↦ v) -∗ Φ l) -∗
@@ -288,8 +264,7 @@ theorem wpi_allocN M (n : Nat) (v : Val) (Φ : Loc → IProp GF) :
   imod inv_acc_timeless Hmask $$ Hinv with ⟨⟨%σinv, HauthInv⟩, Hclose⟩
   ihave %Heq := ghost_map_auth_agree $$ HauthInv Hauth; subst σinv
   imodintro; isplitl [Hauth]
-  · ibubble
-    -- iframe; iframe Hinv
+  · iframe; iframe Hinv
   iapply wpi_bind; iapply wpi_demonic (Hi := inhabited_free_locs σ LawfulLoc.add_pos_nle)
   iintro %r; rcases r with ⟨l, Hfree⟩; simp only
   iapply wpi_bind' M; iapply wpi_set
@@ -333,28 +308,26 @@ theorem wpi_allocN M (n : Nat) (v : Val) (Φ : Loc → IProp GF) :
     simpa [Iris.Std.get?] using Hk.2
   icases Hauth with ⟨HauthInv, HauthState⟩
   imod Hclose $$ [HauthInv] with -
-    <;> ibubble with [backward BigSepM.bigSepM_ofList]
-  -- · iexists σ.insertMany entries;
-  --   rw [HinsertMany]; iassumption
-  -- imodintro; isplitl [HauthState]
-  -- · rw [HinsertMany']; iframe; iframe Hinv
-  -- unfold pointsto
-  -- iapply wpi_pure; iapply Hwand
-  -- iapply HbigSepMap
-  -- iapply (BigSepM.bigSepM_ofList (M := (Std.ExtTreeMap Loc · compare))) $$ Hpts
-  -- exact Hnodup
+  · iexists σ.insertMany entries;
+    rw [HinsertMany]; iassumption
+  imodintro; isplitl [HauthState]
+  · rw [HinsertMany']; iframe; iframe Hinv
+  unfold pointsto
+  iapply wpi_pure; iapply Hwand
+  iapply HbigSepMap
+  iapply (BigSepM.bigSepM_ofList (M := (Std.ExtTreeMap Loc · compare))) $$ Hpts
+  exact Hnodup
 
-@[ibubble backward 75%]
 theorem wpi_alloc M (v : Val) (Φ : Loc → IProp GF) :
     ↑(heapH_inv_name (G := G)) ⊆ M →
     (∀ l, l ↦ v -∗ Φ l) -∗
     WPi (alloc v LawfulLoc.add_pos_nle) @> H; M {{ Φ }} := by
   unfold alloc
-  ibubble
-  -- iintro %Hmask Hwand
-  -- iapply wpi_allocN M 1 v Φ Hmask
-  -- iintro %l Hpts; simp; icases Hpts with ⟨Hpt, -⟩
-  -- iapply Hwand $$ [$]
+  iintro %Hmask Hwand
+  iapply wpi_allocN M 1 v Φ Hmask
+  iintro %l Hpts; simp [LawfulLoc.add_zero];
+  icases Hpts with ⟨Hpt, -⟩
+  iapply Hwand $$ Hpt
 
 end alloc
 

@@ -31,6 +31,17 @@ def collectIrisHypNames (goal : MVarId) : MetaM (Array Name) :=
     let some irisGoal := parseIrisGoal? goalType | return #[]
     return hypNames irisGoal.hyps
 
+/-- User-facing names already present in the Lean context. Generated scripts
+must not shadow these names because later residual proofs may refer to them. -/
+def collectLocalUserNames (goal : MVarId) : MetaM (Array Name) :=
+  goal.withContext do
+    let mut names := #[]
+    for localDecl in ← getLCtx do
+      let name := localDecl.userName.eraseMacroScopes
+      unless name.isAnonymous do
+        names := names.push name
+    return names
+
 /-- Extract the spatial Iris hypotheses from a proof-mode goal. -/
 def spatialHypsOf (goal : MVarId) : MetaM (Array IrisHyp) :=
   goal.withContext do

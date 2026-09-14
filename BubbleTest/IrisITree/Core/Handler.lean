@@ -1,7 +1,5 @@
 module
 
-import Bubble
-
 public import Iris.BI
 import Iris.ProofMode
 public import ITree.Definition
@@ -32,8 +30,6 @@ structure IHandler (PROP : Type u) [BI PROP] (E : Effect.{v}) where
       □ (∀ t, s t -∗ s' t) -∗
       ihandle i Φ s -∗ ihandle i Φ' s'
 
-attribute [local ibubble backward 10%] IHandler.ihandle_mono
-
 instance {PROP E} [BI PROP] (H : IHandler PROP E) (i : E.I) :
     OFE.NonExpansive₂ (H.ihandle i) := by
   constructor
@@ -42,13 +38,12 @@ instance {PROP E} [BI PROP] (H : IHandler PROP E) (i : E.I) :
       iprop(∃ (Φ' s' : E.O i → PROP),
         (∀ a, Φ' a -∗ Φ a) ∗ □ (∀ a, s' a -∗ s a) ∗ H.ihandle i Φ' s') := by
     apply BIBase.BiEntails.to_eq
-    ibubble
-    -- isplit
-    -- · iintro Hwand; iexists Φ, s; isplitr;
-    --   · iintro %a H; iexact H
-    --   · isplitr; imodintro; iintro %a H; iexact H; iexact Hwand
-    -- · iintro ⟨%Φ', ⟨%s', ⟨HmonΦ, ⟨Hmons, HH⟩⟩⟩⟩
-    --   iapply H.ihandle_mono $$ HmonΦ Hmons HH
+    isplit
+    · iintro Hwand; iexists Φ, s; isplitr;
+      · iintro %a H; iexact H
+      · isplitr; imodintro; iintro %a H; iexact H; iexact Hwand
+    · iintro ⟨%Φ', ⟨%s', ⟨HmonΦ, ⟨Hmons, HH⟩⟩⟩⟩
+      iapply H.ihandle_mono $$ HmonΦ Hmons HH
   apply (Hmon Φ₁ s₁).dist.trans
   apply ((exists_ne λ Φ' => ?_)).trans (Hmon Φ₂ s₂).dist.symm
   refine exists_ne λ s' => ?_
@@ -70,10 +65,12 @@ def sumH : IHandler PROP (E₁ ⊕ₑ E₂) where
   ihandle_mono := by
     intro e Φ Φ' s s'
     cases e with
-    | inl e1 => ibubble
-    -- iintro HΦwand Hswand HH; iapply H₁.ihandle_mono $$ HΦwand Hswand HH
-    | inr e2 => ibubble
-    -- iintro HΦwand Hswand HH; iapply H₂.ihandle_mono $$ HΦwand Hswand HH
+    | inl e1 =>
+      iintro HΦwand Hswand HH
+      iapply H₁.ihandle_mono $$ HΦwand Hswand HH
+    | inr e2 =>
+      iintro HΦwand Hswand HH
+      iapply H₂.ihandle_mono $$ HΦwand Hswand HH
 infixr:30 " ⊕ₕ " => sumH
 
 @[simp]
@@ -127,13 +124,10 @@ class WandH {PROP E} [BI PROP] (H1 : IHandler PROP E) (H2 : IHandler PROP E) whe
   is_wandH : ∀ (i : E.I) (Φ s : E.O i → PROP),
     ⊢ H1.ihandle i Φ s -∗ H2.ihandle i Φ s
 
-attribute [local ibubble backward 75%] WandH.is_wandH
-
 instance {PROP E} [BI PROP] (H : IHandler PROP E) : WandH H H := by
   constructor
-  ibubble
-  -- iintro %i %Φ %s H
-  -- iexact H
+  iintro %i %Φ %s H
+  iexact H
 
 instance {PROP E₁ E₂} [BI PROP]
     (H1 H1' : IHandler PROP E₁) (H2 H2' : IHandler PROP E₂)
@@ -141,10 +135,10 @@ instance {PROP E₁ E₂} [BI PROP]
     WandH (H1 ⊕ₕ H2) (H1' ⊕ₕ H2') := by
     constructor; intro e Φ s
     cases e with
-    | inl e1 => ibubble
-      -- iintro H; simp only [sumH_inl]; iapply Hwand1.is_wandH $$ H
-    | inr e2 => ibubble
-      -- iintro H; simp only [sumH_inr]; iapply Hwand2.is_wandH $$ H
+    | inl e1 =>
+      iintro H; simp only [sumH_inl]; iapply Hwand1.is_wandH $$ H
+    | inr e2 =>
+      iintro H; simp only [sumH_inr]; iapply Hwand2.is_wandH $$ H
 
 end handler_WandH
 
@@ -155,17 +149,15 @@ class Sequential {PROP} [BI PROP] {E : Effect} (H : IHandler PROP E) where
   is_seq : ∀ (i : E.I) (Φ s : E.O i → PROP),
     ⊢ H.ihandle i Φ s -∗ H.ihandle i Φ (fun _ => iprop(⌜False⌝))
 
-attribute [local ibubble backward 75%] Sequential.is_seq
-
 instance {PROP E₁ E₂} [BI PROP]
   (H1 : IHandler PROP E₁) (H2 : IHandler PROP E₂)
   [Hs1 : Sequential H1] [Hs2 : Sequential H2] : Sequential (H1 ⊕ₕ H2) := by
     constructor; intro e Φ s
     cases e with
-    | inl e1 => ibubble
-      -- iintro H; simp only [sumH_inl]; iapply Hs1.is_seq $$ H
-    | inr e2 => ibubble
-      -- iintro H; simp only [sumH_inr]; iapply Hs2.is_seq $$ H
+    | inl e1 =>
+      iintro H; simp only [sumH_inl]; iapply Hs1.is_seq $$ H
+    | inr e2 =>
+      iintro H; simp only [sumH_inr]; iapply Hs2.is_seq $$ H
 
 end handler_Sequential
 
@@ -210,12 +202,10 @@ instance {E GE : Effect.{u} } {R σ : Type _}
     iintro Hh Hinv
     ihave >⟨%a, %s', %_, Hinv, HG⟩ := A.adequate $$ Hh [$]; assumption
     iexists (k a), s', (λ P => P (k a)), Ms, [λ P => P (k a)]
-    ibubble pureBy simp [*]
-    -- imodintro
-    -- isplitr; itrivial
-    -- iframe
-    -- isplitr; itrivial
-    -- simp; iframe
-    -- iintro %_ $ !> //
+    imodintro
+    isplitr; itrivial; iframe
+    isplitr; itrivial
+    simp; isplitr; itrivial
+    iintro %_ $ !> //
 
 end adequate

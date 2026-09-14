@@ -1,7 +1,5 @@
 module
 
-import Bubble
-
 public import ITree
 public import Iris.HeapLang
 public import Iris.Std.BitOp

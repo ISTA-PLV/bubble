@@ -68,6 +68,18 @@ private meta def parseRuleDirection (stx : Syntax) : TermElabM RuleBuilderKind :
 
 private meta def parseLocalRule (stx : Syntax) : TermElabM LocalTheoremRule := do
   match stx with
+  | `(ibubbleLocalRule| $declStx:ident) =>
+      return {
+        kind := .backward
+        decl := ← parseRuleDecl declStx
+        action := .insert .hundred
+      }
+  | `(ibubbleLocalRule| $declStx:ident $p:num %) =>
+      return {
+        kind := .backward
+        decl := ← parseRuleDecl declStx
+        action := .insert (← parseSuccessProbability p)
+      }
   | `(ibubbleLocalRule| $dir:ibubbleRuleDirection $declStx:ident) =>
       return {
         kind := ← parseRuleDirection dir
@@ -84,6 +96,12 @@ private meta def parseLocalRule (stx : Syntax) : TermElabM LocalTheoremRule := d
 
 private meta def parseErasedRule (stx : Syntax) : TermElabM LocalTheoremRule := do
   match stx with
+  | `(ibubbleErasedRule| $declStx:ident) =>
+      return {
+        kind := .backward
+        decl := ← parseRuleDecl declStx
+        action := .erase
+      }
   | `(ibubbleErasedRule| $dir:ibubbleRuleDirection $declStx:ident) =>
       return {
         kind := ← parseRuleDirection dir

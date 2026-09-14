@@ -2,6 +2,7 @@ module
 
 public meta import Iris.ProofMode
 public meta import Bubble.Replay.Normalization
+public meta import Bubble.Search.Names
 
 public meta section
 
@@ -174,16 +175,58 @@ private def solvePureGoals (goals : Array MVarId) : ReplayM (Array MVarId) := do
 
 /-- Replay one recorded rule application and return its Iris children and unrelated goals. -/
 def replayRuleApplication (focus : MVarId) (goal : Goal) (rappRef : RappRef)
-    (children : Array BubbleId) (expectedChildren : Nat := children.size) :
+    (children : Array BubbleId) (expectedChildren : Nat := children.size)
+    (singleChildConsumed? : Option (Array IrisHyp) := none) :
     ReplayM (Array MVarId × Array MVarId) := do
   let (normalizedFocus, normRemaining) ← normalizeForRuleApplication focus goal
   let rapp ← rappRef.get
   let plat ← rapp.children.get
-  let splits ← if plat.kind.isLinear && children.size > 1
-    then children.mapM λ id => return (← ReplayM.getBubble id).consumed
-    else pure #[]
+  let unaryApplyHyps := match rapp.appliedRule.info.builder with
+    | .tactic .applyHyps => true
+    | _ => false
+  let unaryContextUsed := singleChildConsumed?.any fun consumed => !consumed.isEmpty
   let config ← ReplayM.getConfig
-  let tactic ← mkRuleApplicationTactic rapp splits expectedChildren config
+  let splits ←
+    if plat.kind.isLinear && children.size > 1 then
+      children.mapM λ id => return (← ReplayM.getBubble id).consumed
+    else if config.generateScript? && plat.kind.isSingle && expectedChildren == 1 &&
+        unaryApplyHyps && unaryContextUsed then
+      /- A unary `iapply` still benefits from an explicit context. Since its
+      sole child receives the whole remaining spatial context, reconstruct
+      that context directly and omit any spatial hypothesis consumed by the
+      application itself. -/
+      let spatial ← Bubble.Search.spatialHypsOf normalizedFocus
+      let usedName? : Option Name := match rapp.usedHyp? with
+        | some (.spatial hyp) | some (.intuitionistic hyp) => some hyp.name
+        | some (.lean userName _) => some userName
+        | none => none
+      pure #[spatial.filter λ hyp =>
+        let name := hyp.name.eraseMacroScopes
+        usedName?.all (·.eraseMacroScopes != name)]
+    else
+      pure #[]
+  let plainTactic ← mkRuleApplicationTactic rapp #[] expectedChildren config
+  /- A unary specialization can make the replayed script substantially more
+  informative, but it is not interchangeable with a bare `iapply`: in
+  particular, it may specialize a wand before a surrounding modality has been
+  handled.  Try the more explicit form in an isolated metavariable state and
+  keep it only when it produces the same number of Iris child goals. -/
+  let explicitUnary :=
+    config.generateScript? && plat.kind.isSingle && expectedChildren == 1 &&
+      unaryApplyHyps && unaryContextUsed
+  let tactic ← if !explicitUnary then
+    mkRuleApplicationTactic rapp splits expectedChildren config
+  else
+    let candidate ← mkRuleApplicationTactic rapp splits expectedChildren config
+    let probeState ← liftM (m := MetaM) saveState
+    let accepted ← try
+      let generated ← withSuppressedMessages <| evalTacticAt candidate normalizedFocus
+      let generated ← ReplayM.openGoals generated.toArray
+      let (irisGoals, _) ← classifyGoals generated
+      pure (irisGoals.size == expectedChildren)
+    catch _ => pure false
+    probeState.restore
+    pure (if accepted then candidate else plainTactic)
   trace[ibubble.replay]
     "Rapp {rapp.id}, rule {rapp.appliedRule.id}: {tactic}"
   let preState ← liftM (m := MetaM) saveState

@@ -1,21 +1,28 @@
 name = "bubble"
 version = "0.1.0"
 license = "Apache-2.0"
-defaultTargets = ["Bubble", "BubbleTest"]
+defaultTargets = ["Bubble"]
+testDriver = "BubbleTest"
 
 [[require]]
 name = "iris"
 git = "https://github.com/leanprover-community/iris-lean.git"
-rev = "master"
+rev = "c851014de2fee12ee3c2cb5cee7e07b5c2b699b0"
 subDir = "Iris"
 
 [[require]]
 name = "Coinductive"
-scope = "ISTA-PLV"
+git = "https://github.com/ISTA-PLV/coinductive.git"
 rev = "d1aeffe87ec7bd4bd13ed92fdc00ef6c5d58f800"
+
+[[require]]
+name = "aesop"
+git = "https://github.com/leanprover-community/aesop.git"
+rev = "v4.32.0"
 
 [[lean_lib]]
 name = "Bubble"
 
 [[lean_lib]]
 name = "BubbleTest"
+globs = ["BubbleTest.+"]
