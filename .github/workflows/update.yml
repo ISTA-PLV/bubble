@@ -1,0 +1,54 @@
+name: Update Lean and dependencies
+
+on:
+  schedule:
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: update-lean
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Refresh pinned direct dependencies
+        shell: python
+        run: |
+          import pathlib
+          import re
+          import subprocess
+          import tomllib
+
+          path = pathlib.Path("lakefile.toml")
+          content = path.read_text()
+          for dependency in tomllib.loads(content)["require"]:
+              revision = subprocess.check_output(
+                  ["git", "ls-remote", dependency["git"], "HEAD"], text=True
+              ).split()[0]
+              if not re.fullmatch(r"[0-9a-f]{40}", revision):
+                  raise ValueError("Invalid upstream revision")
+              pattern = (
+                  r'(\[\[require\]\]\s*name\s*=\s*"'
+                  + re.escape(dependency["name"])
+                  + r'"(?:(?!\[\[).)*?rev\s*=\s*)"[^"]*"'
+              )
+              content, count = re.subn(
+                  pattern, lambda match: match[1] + '"' + revision + '"',
+                  content, flags=re.S
+              )
+              if count != 1:
+                  raise ValueError("Expected exactly one dependency revision")
+          path.write_text(content)
+      - name: Update and validate Lean project
+        uses: leanprover-community/lean-update@bbf6bc2d6ce48c75b9d644f870b3328c593477f3
+        with:
+          on_update_succeeds: pr
+          on_update_fails: issue

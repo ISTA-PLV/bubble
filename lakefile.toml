@@ -7,13 +7,13 @@ testDriver = "BubbleTest"
 [[require]]
 name = "iris"
 git = "https://github.com/leanprover-community/iris-lean.git"
-rev = "c851014de2fee12ee3c2cb5cee7e07b5c2b699b0"
+rev = "v4.35.0"
 subDir = "Iris"
 
 [[require]]
 name = "Coinductive"
 git = "https://github.com/ISTA-PLV/coinductive.git"
-rev = "d1aeffe87ec7bd4bd13ed92fdc00ef6c5d58f800"
+rev = "617e8cb27b69a14e3d3217c850d47fde8c37b5f1"
 
 [[lean_lib]]
 name = "Bubble"
