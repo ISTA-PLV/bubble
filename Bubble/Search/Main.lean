@@ -43,8 +43,8 @@ private partial def theoremUsesOnPath (goalRef : GoalRef) (decl : Name) : Search
   let some parentRappRef := platform.parent? | return 0
   let parentRapp ← parentRappRef.get
   let parentRule := parentRapp.appliedRule
-  let usedHere := match parentRule.info.builder with
-    | .backward _ | .forward => if parentRule.id.name == decl then 1 else 0
+  let usedHere := match parentRule.id.builder with
+    | .backward _ | .forward _ => if parentRule.id.name == decl then 1 else 0
     | .tactic _ => 0
   return usedHere + (← theoremUsesOnPath parentRapp.parent decl)
 
@@ -54,8 +54,8 @@ private def runRule (goalRef : GoalRef) (matchResult : RuleMatch) :
   let config ← SearchM.getConfig
   trace[ibubble.search]
     "goal {(← goalRef.get).id} trying rule {matchResult.rule.id}"
-  let theoremUses? ← match matchResult.rule.info.builder with
-  | .backward _ | .forward =>
+  let theoremUses? ← match matchResult.rule.id.builder with
+  | .backward _ | .forward _ =>
       let uses ← theoremUsesOnPath goalRef matchResult.rule.id.name
       if uses >= config.maxTheoremUses then
         trace[ibubble.search]
@@ -68,7 +68,7 @@ private def runRule (goalRef : GoalRef) (matchResult : RuleMatch) :
     | return .failed
   input.state.restore
   let output ← input.goal.withContext <|
-    matchResult.rule.info.builder.run input
+    matchResult.rule.id.builder.run input
   if output.rappSpecs.isEmpty then
     trace[ibubble.search] "rule {matchResult.rule.id} did not apply to goal {(← goalRef.get).id}"
   else
@@ -79,15 +79,13 @@ private def runRule (goalRef : GoalRef) (matchResult : RuleMatch) :
     | some uses =>
       /- Multiple use theorem should be given penalty. -/
         let penalty := Percent.medium ^ uses
-        { matchResult.rule with info := {
-          matchResult.rule.info with
-          successProbability := matchResult.rule.info.successProbability * penalty
-        } }
+        { matchResult.rule with
+          successProb := matchResult.rule.successProb * penalty }
     | none => matchResult.rule
   if !output.rappSpecs.isEmpty && theoremUses?.getD 0 > 0 then
     trace[ibubble.search]
       m!"penalized theorem {matchResult.rule.id.name}: {theoremUses?.getD 0}" ++
-      m!" previous use(s), effective probability {usedRule.info.successProbability}"
+      m!" previous use(s), effective probability {usedRule.successProb}"
   let result ← commitRuleOutput goalRef usedRule output
   match result with
   | .applied closedRapps =>

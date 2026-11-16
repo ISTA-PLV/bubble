@@ -31,10 +31,10 @@ private def platformKind (spec : RappSpec) : SearchM Q PlatKind := do
     | none => throwError "ibubble (commit): a Rapp with multiple child goals must specify a multi-goal action"
 
 /-- Commit based on the RappSpec's content. -/
-private def commitSpec (parentRef : GoalRef) (usedRule : Rule RuleInfo)
+private def commitSpec (parentRef : GoalRef) (usedRule : Rule)
     (spec : RappSpec) : SearchM Q (RappRef × Array GoalRef) := do
   let parent ← parentRef.get
-  let goalProbability := parent.successProbability * usedRule.info.successProbability
+  let goalProbability := parent.successProbability * usedRule.successProb
   let kind ← platformKind spec
   /- Construct a platform containing its groups and child goals. -/
   let platformRef ← IO.mkRef <| Plat.mk {
@@ -125,7 +125,7 @@ private def commitSpec (parentRef : GoalRef) (usedRule : Rule RuleInfo)
 end Commit
 
 /-- Commit a rule's output to the target goal node by creating child Rapp nodes. -/
-def commitRuleOutput (goalRef : GoalRef) (usedRule : Rule RuleInfo)
+def commitRuleOutput (goalRef : GoalRef) (usedRule : Rule)
     (output : RuleOutput) : SearchM Q RuleCommitResult := do
   if output.rappSpecs.isEmpty then return .failed
   /- Collect every Rapp for the goal and closed Rapps for bubble emission. -/

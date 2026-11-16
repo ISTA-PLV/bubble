@@ -27,9 +27,15 @@ inductive LocalRuleAction where
   | erase
   deriving Inhabited
 
+/-- The direction in which a theorem is used by local rule configuration. -/
+inductive RuleDirection where
+  | backward
+  | forward
+  deriving Inhabited, BEq
+
 /- A theorem rule added for a single `ibubble` invocation. -/
 structure LocalTheoremRule where
-  kind : RuleBuilderKind
+  direction : RuleDirection
   decl : Name
   action : LocalRuleAction
   deriving Inhabited

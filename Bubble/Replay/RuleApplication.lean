@@ -39,12 +39,12 @@ private def mkRuleApplicationTactic (rapp : Rapp)
     (splits : Array (Array IrisHyp)) (childCount : Nat)
     (config : SearchConfig) : MetaM (TSyntax `tactic) := do
   let fallback ← `(tactic| skip)
-  match rapp.appliedRule.info.builder with
+  match rapp.appliedRule.id.builder with
   | .backward _ =>
       let premiseSplits := splits.extract 0 (splits.size - 1)
       let decl := mkIdent rapp.appliedRule.id.name.eraseMacroScopes
       mkIApply decl premiseSplits
-  | .forward => pure fallback
+  | .forward _ => pure fallback
   | .tactic .ipureIntro =>
       if config.pureStop? then `(tactic| ipureintro)
       else
@@ -182,7 +182,7 @@ def replayRuleApplication (focus : MVarId) (goal : Goal) (rappRef : RappRef)
   let (normalizedFocus, normRemaining) ← normalizeForRuleApplication focus goal
   let rapp ← rappRef.get
   let plat ← rapp.children.get
-  let unaryApplyHyps := match rapp.appliedRule.info.builder with
+  let unaryApplyHyps := match rapp.appliedRule.id.builder with
     | .tactic .applyHyps => true
     | _ => false
   let unaryContextUsed := singleChildConsumed?.any fun consumed => !consumed.isEmpty

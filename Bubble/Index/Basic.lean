@@ -10,19 +10,17 @@ open Lean Lean.Meta
 
 namespace Bubble
 
-structure Index (α : Type) where
-  byFullGoal : DiscrTree (Rule α)
-  byTarget : DiscrTree (Rule α)
-  byIrisHyp : DiscrTree (Rule α)
-  byLeanHyp : DiscrTree (Rule α)
-  unindexed : Std.HashSet (Rule α)
+structure Index where
+  byFullGoal : DiscrTree Rule
+  byTarget : DiscrTree Rule
+  byIrisHyp : DiscrTree Rule
+  byLeanHyp : DiscrTree Rule
+  unindexed : Std.HashSet Rule
   deriving Inhabited
 
 namespace Index
 
-variable {α : Type} [BEq α] [Ord α] [Hashable α]
-
-instance : EmptyCollection (Index α) where
+instance : EmptyCollection Index where
   emptyCollection := {
     byFullGoal := {}
     byTarget := {}
@@ -31,15 +29,15 @@ instance : EmptyCollection (Index α) where
     unindexed := {}
   }
 
-def merge (rilhs rirhs : Index α) : Index α where
+def merge (rilhs rirhs : Index) : Index where
   byFullGoal := rilhs.byFullGoal.mergePreservingDuplicates rirhs.byFullGoal
   byTarget := rilhs.byTarget.mergePreservingDuplicates rirhs.byTarget
   byIrisHyp := rilhs.byIrisHyp.mergePreservingDuplicates rirhs.byIrisHyp
   byLeanHyp := rilhs.byLeanHyp.mergePreservingDuplicates rirhs.byLeanHyp
   unindexed := rilhs.unindexed.union rirhs.unindexed
 
-partial def add (rule : Rule α) (mode : IndexingMode) (idx : Index α) :
-    Index α :=
+partial def add (rule : Rule) (mode : IndexingMode) (idx : Index) :
+    Index :=
   match mode with
   | .unindexed =>
     { idx with unindexed := idx.unindexed.insert rule }

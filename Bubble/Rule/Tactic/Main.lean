@@ -31,6 +31,6 @@ def run : RuleBuilder → RuleRunner
   | .tactic .imod => Rule.Tactic.IMod.run
   | .tactic .isplit => Rule.Tactic.ISplit.run
   | .backward _ => Rule.Backward.run
-  | .forward => fun _ => return RuleOutput.ofSpecs #[]
+  | .forward _ => fun _ => return RuleOutput.ofSpecs #[]
 
 end Bubble.RuleBuilder

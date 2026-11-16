@@ -12,50 +12,50 @@ namespace Bubble.Rule
 open Lean Meta
 open Iris.BI
 
-private def builtinRule (name : Name) (kind : RuleBuilderKind)
-    (descr : TacticDescr) (probability : Percent) : Rule RuleInfo where
-  id := { name, kind, phase := .expand, scope := .global }
+private def builtinRule (name : Name)
+    (descr : TacticDescr) (probability : Percent) : Rule where
+  id := { name, builder := .tactic descr, scope := .global }
   indexingMode := .unindexed
-  info := .ofBuilder (.tactic descr) probability
+  successProb := probability
 
-def identityRule : Rule RuleInfo :=
-  builtinRule `identity .forward .identity .medium
+def identityRule : Rule :=
+  builtinRule `identity .identity .medium
 
-def applyHypsRule : Rule RuleInfo :=
-  builtinRule `applyHyps .apply .applyHyps .high
+def applyHypsRule : Rule :=
+  builtinRule `applyHyps .applyHyps .high
 
-def haveHypsRule : Rule RuleInfo :=
-  builtinRule `haveHyps .forward .haveHyps .medium
+def haveHypsRule : Rule :=
+  builtinRule `haveHyps .haveHyps .medium
 
-def icasesRule : Rule RuleInfo :=
-  builtinRule `icases .forward .icases .low
+def icasesRule : Rule :=
+  builtinRule `icases .icases .low
 
-def icasesFalseRule : Rule RuleInfo :=
-  builtinRule `icasesFalse .forward .icasesFalse .almost
+def icasesFalseRule : Rule :=
+  builtinRule `icasesFalse .icasesFalse .almost
 
-def ipureIntroRule : Rule RuleInfo :=
-  builtinRule `ipureIntro .apply .ipureIntro .high
+def ipureIntroRule : Rule :=
+  builtinRule `ipureIntro .ipureIntro .high
 
-def ileftRule : Rule RuleInfo :=
-  builtinRule `ileft .apply .ileft .high
+def ileftRule : Rule :=
+  builtinRule `ileft .ileft .high
 
-def irightRule : Rule RuleInfo :=
-  builtinRule `iright .apply .iright .high
+def irightRule : Rule :=
+  builtinRule `iright .iright .high
 
-def iexistRule : Rule RuleInfo :=
-  builtinRule `iexist .apply .iexist .almost
+def iexistRule : Rule :=
+  builtinRule `iexist .iexist .almost
 
-def imodIntroRule : Rule RuleInfo :=
-  builtinRule `imodIntro .apply .imodIntro .medium
+def imodIntroRule : Rule :=
+  builtinRule `imodIntro .imodIntro .medium
 
-def imodRule : Rule RuleInfo :=
-  builtinRule `imod .apply .imod .low
+def imodRule : Rule :=
+  builtinRule `imod .imod .low
 
-def isplitRule : Rule RuleInfo :=
-  builtinRule `isplit .apply .isplit .almost
+def isplitRule : Rule :=
+  builtinRule `isplit .isplit .almost
 
-def commonIndex : Index RuleInfo :=
-  ({} : Index RuleInfo)
+def commonIndex : Index :=
+  ({} : Index)
     |>.add identityRule identityRule.indexingMode
     |>.add applyHypsRule applyHypsRule.indexingMode
     |>.add haveHypsRule haveHypsRule.indexingMode
@@ -69,22 +69,23 @@ def commonIndex : Index RuleInfo :=
     |>.add imodRule imodRule.indexingMode
     |>.add isplitRule isplitRule.indexingMode
 
-private def theoremRule (scope : RuleScope) (kind : RuleBuilderKind)
+private def theoremRule (scope : RuleScope) (direction : RuleDirection)
     (decl : Name) (probability : Percent)
-    (form : BackwardRuleForm := .direct) (variant : Nat := 0)
-    (indexingMode : IndexingMode := .unindexed) : Rule RuleInfo where
-  id := { name := decl, kind, phase := .expand, scope, variant }
-  indexingMode
-  info := .ofBuilder
-    (match kind with
+    (form : TheoremApplyForm := .direct)
+    (indexingMode : IndexingMode := .unindexed) : Rule where
+  id := {
+    name := decl
+    builder := match direction with
       | .backward => .backward form
-      | .forward => .forward
-      | _ => .forward)
-    probability
+      | .forward => .forward form
+    scope
+  }
+  indexingMode
+  successProb := probability
 
 /-- Lower a registered bi-entailment into two explicitly oriented backward rules. -/
 private def backwardTheoremRules (scope : RuleScope) (decl : Name)
-    (probability : Percent) : MetaM (Array (Rule RuleInfo)) := do
+    (probability : Percent) : MetaM (Array Rule) := do
   let info ← getConstInfo decl
   let (_, _, body) ← forallMetaTelescopeReducing info.type
   let body ← whnf body
@@ -95,34 +96,34 @@ private def backwardTheoremRules (scope : RuleScope) (decl : Name)
   let mpMode ← IndexingMode.targetMatching rhs
   let mprMode ← IndexingMode.targetMatching lhs
   return #[
-    theoremRule scope .backward decl probability .mp 1 mpMode,
-    theoremRule scope .backward decl probability .mpr 2 mprMode
+    theoremRule scope .backward decl probability .mp mpMode,
+    theoremRule scope .backward decl probability .mpr mprMode
   ]
 
 def backwardIndex (localRules : Array LocalTheoremRule := #[]) :
-    MetaM (Index RuleInfo) := do
+    MetaM Index := do
   (← getIbubbleBackwardLemmas).foldlM (init := {}) λ index entry => do
-    if localRules.any λ rule => rule.kind == .backward && rule.decl == entry.decl then
+    if localRules.any λ rule => rule.direction == .backward && rule.decl == entry.decl then
       return index
     return (← backwardTheoremRules .global entry.decl entry.successProbability).foldl
       (init := index) λ index rule => index.add rule rule.indexingMode
 
 def localTheoremIndex (rules : Array LocalTheoremRule) :
-    MetaM (Index RuleInfo) := do
-  let mut index : Index RuleInfo := {}
+    MetaM Index := do
+  let mut index : Index := {}
   for localRule in rules do
     match localRule.action with
     | .erase => pure ()
     | .insert probability =>
-      if localRule.kind == .backward then
+      if localRule.direction == .backward then
         for rule in ← backwardTheoremRules .local localRule.decl probability do
           index := index.add rule rule.indexingMode
       else
-        let rule := theoremRule .local localRule.kind localRule.decl probability
+        let rule := theoremRule .local localRule.direction localRule.decl probability
         index := index.add rule rule.indexingMode
   return index
 
-def buildIndex (config : SearchConfig) : MetaM (Index RuleInfo) := do
+def buildIndex (config : SearchConfig) : MetaM Index := do
   return commonIndex.merge (← backwardIndex config.localTheoremRules)
     |>.merge (← localTheoremIndex config.localTheoremRules)
 
