@@ -57,7 +57,7 @@ structure RappData (GoalRef PlatRef : Type) : Type where
   parent : GoalRef
   children : PlatRef
 
-  appliedRule : Rule RuleInfo
+  appliedRule : Rule
 
   /- Spatial hypotheses generated/removed by this rule application. -/
   usedHyps : Array AppliedHyp

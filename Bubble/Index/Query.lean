@@ -15,10 +15,8 @@ open Iris.ProofMode
 
 initialize registerTraceClass `ibubble.ruleIndex
 
-variable {α : Type}
-
-private abbrev HitMap (α : Type) [Ord α] :=
-  Std.TreeMap (Rule α) (Array IndexMatchLocation)
+private abbrev HitMap :=
+  Std.TreeMap Rule (Array IndexMatchLocation)
     Rule.compareByPriorityThenName
 
 private inductive QuerySurface
@@ -63,28 +61,28 @@ private def locationsToSet (locs : Array IndexMatchLocation) :
   return result
 
 @[inline]
-private def emptyHitMap [Ord α] : HitMap α :=
+private def emptyHitMap : HitMap :=
   Std.TreeMap.empty
 
 @[inline]
-private def insertHit [Ord α] (m : HitMap α) (rule : Rule α)
-    (loc : IndexMatchLocation) : HitMap α :=
+private def insertHit (m : HitMap) (rule : Rule)
+    (loc : IndexMatchLocation) : HitMap :=
   match m.get? rule with
   | none => m.insert rule #[loc]
   | some locs => m.insert rule (locs.push loc)
 
 @[inline]
-private def collectIndexed [Ord α] (tree : DiscrTree (Rule α)) (e : Expr)
-    (loc : IndexMatchLocation) (include? : Rule α → Bool)
-    (m : HitMap α) : MetaM (HitMap α) := do
+private def collectIndexed (tree : DiscrTree Rule) (e : Expr)
+    (loc : IndexMatchLocation) (include? : Rule → Bool)
+    (m : HitMap) : MetaM HitMap := do
   let e ← instantiateMVars e
   let rules ← getUnify tree e
   return rules.foldl (init := m) λ m rule =>
     if include? rule then insertHit m rule loc else m
 
 @[inline]
-private def collectUnindexed [Ord α] (idx : Index α)
-    (include? : Rule α → Bool) (m : HitMap α) : HitMap α := Id.run do
+private def collectUnindexed (idx : Index)
+    (include? : Rule → Bool) (m : HitMap) : HitMap := Id.run do
   let mut result := m
   for rule in idx.unindexed do
     if include? rule then
@@ -92,9 +90,9 @@ private def collectUnindexed [Ord α] (idx : Index α)
   return result
 
 @[inline]
-private def collectSurface [Ord α] (idx : Index α)
-    (include? : Rule α → Bool) (m : HitMap α) :
-    QuerySurface → MetaM (HitMap α)
+private def collectSurface (idx : Index)
+    (include? : Rule → Bool) (m : HitMap) :
+    QuerySurface → MetaM HitMap
   | .fullGoal e => collectIndexed idx.byFullGoal e .fullGoal include? m
   | .target e => collectIndexed idx.byTarget e .target include? m
   | .irisHyp loc e => collectIndexed idx.byIrisHyp e loc include? m
@@ -102,8 +100,7 @@ private def collectSurface [Ord α] (idx : Index α)
   | .unindexed => return collectUnindexed idx include? m
 
 @[inline]
-private def hitMapToResults [Ord α] (m : HitMap α) :
-    Array (IndexMatchResult (Rule α)) :=
+private def hitMapToResults (m : HitMap) : Array RuleMatch :=
   let results := m.foldl
     (λ acc rule locations =>
       acc.push { rule, locations := locationsToSet locations })
@@ -114,19 +111,19 @@ private def hitMapToResults [Ord α] (m : HitMap α) :
 /-- Query an index against all matchable surfaces of an Iris proof-mode goal:
 the full Lean goal type, the Iris target, Iris proof-mode hypotheses, Lean local
  hypotheses, and unindexed rules. -/
-def query [Ord α]
-    (idx : Index α) (mvar : MVarId) (irisGoal : IrisGoal)
-    (include? : Rule α → Bool := λ _ => true) :
-    MetaM (Array (IndexMatchResult (Rule α))) := do
-  let mut result : HitMap α := emptyHitMap
+def query
+    (idx : Index) (mvar : MVarId) (irisGoal : IrisGoal)
+    (include? : Rule → Bool := λ _ => true) :
+    MetaM (Array RuleMatch) := do
+  let mut result : HitMap := emptyHitMap
   for surface in ← collectSurfaces mvar irisGoal do
     result ← collectSurface idx include? result surface
   return hitMapToResults result
 
-def queryMVar [Ord α]
-    (idx : Index α) (mvar : MVarId)
-    (include? : Rule α → Bool := fun _ => true) :
-    MetaM (Array (IndexMatchResult (Rule α))) := do
+def queryMVar
+    (idx : Index) (mvar : MVarId)
+    (include? : Rule → Bool := fun _ => true) :
+    MetaM (Array RuleMatch) := do
   mvar.withContext do
     let goalType ← instantiateMVars (← mvar.getType)
     let some irisGoal := parseIrisGoal? goalType
