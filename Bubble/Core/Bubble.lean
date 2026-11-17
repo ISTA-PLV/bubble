@@ -31,7 +31,7 @@ structure RisingBubble where
 
 -- The central certificate type intentionally shares the project's namespace name.
 set_option linter.iris.dupNamespace false in
-/-- A rising bubble materialized at an ordinary/linear platform or at the root. -/
+/-- A rising bubble materialized at an unrestricted/linear platform or at the root. -/
 structure Bubble where
   id       : BubbleId
   goal     : GoalId

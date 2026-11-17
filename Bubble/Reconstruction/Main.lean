@@ -88,7 +88,7 @@ private partial def followForwardPath (bubble : Bubble) (path : Array RappId)
     return ← followForwardPath bubble tail childGoal irisGoals[0]! (remaining ++ localRemaining)
 
   /- The final Rapp has been reached; either close the goal directly or enter an
-    ordinary/linear platform. -/
+    unrestricted/linear platform. -/
   if children?.isSome then
     let chain ← match bubble.endKind with
       | .platformEmission terminals =>

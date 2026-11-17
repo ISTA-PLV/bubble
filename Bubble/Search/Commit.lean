@@ -26,7 +26,7 @@ private def platformKind (spec : RappSpec) : SearchM Q PlatKind := do
       throwError "ibubble (commit): a Rapp with at most one child goal must not specify a multi-goal action"
     return .single
   else match spec.effect.multiGoalAction? with
-    | some .shareContext => return .ordinary
+    | some .shareContext => return .unrestricted
     | some .partitionContext => return .linear
     | none => throwError "ibubble (commit): a Rapp with multiple child goals must specify a multi-goal action"
 
