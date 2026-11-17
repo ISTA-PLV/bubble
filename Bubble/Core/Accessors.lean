@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Bubble.Core.Impl
@@ -175,7 +176,7 @@ protected def modify
 @[inline] def id (r : Rapp) : RappId := r.elim.id
 @[inline] def parent (r : Rapp) : GoalRef := r.elim.parent
 @[inline] def children (r : Rapp) : PlatRef := r.elim.children
-@[inline] def appliedRule (r : Rapp) : Rule RuleInfo := r.elim.appliedRule
+@[inline] def appliedRule (r : Rapp) : Rule := r.elim.appliedRule
 @[inline] def usedHyps (r : Rapp) : Array AppliedHyp := r.elim.usedHyps
 @[inline] def usedHyp? (r : Rapp) : Option AppliedHyp := r.usedHyps[0]?
 @[inline] def consumedSpatialHyps (r : Rapp) : Array IrisHyp :=
@@ -190,7 +191,7 @@ protected def modify
   r.modify fun r => { r with parent }
 @[inline] def setChildren (children : PlatRef) (r : Rapp) : Rapp :=
   r.modify fun r => { r with children }
-@[inline] def setAppliedRule (appliedRule : Rule RuleInfo) (r : Rapp) : Rapp :=
+@[inline] def setAppliedRule (appliedRule : Rule) (r : Rapp) : Rapp :=
   r.modify fun r => { r with appliedRule }
 @[inline] def setUsedHyps (usedHyps : Array AppliedHyp) (r : Rapp) : Rapp :=
   r.modify fun r => { r with usedHyps }

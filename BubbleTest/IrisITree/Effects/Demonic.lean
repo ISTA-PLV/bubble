@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 import Iris.ProofMode
@@ -5,7 +6,6 @@ public import ITree.Effects.Demonic
 public import BubbleTest.IrisITree.Core.Wpi
 
 @[expose] public section
-
 
 namespace IrisITree.Effects
 

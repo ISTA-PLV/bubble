@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
  module
 
 public meta import Bubble.Core.TreeM
@@ -79,7 +80,7 @@ private def spawnResidual (iteration : Iteration) (platRef : PlatRef) (group : G
           | throwError "ibubble (plat): residual group expected an Iris goal"
         let template ← if plat.kind.isLinear then
           consumed.foldlM (init := template) λ goal used => do
-            if !goal.hyps.spatialIVarIds.contains used.ivar then return goal
+            if !(goal.hyps.spatialIVarIds .topToBottom).contains used.ivar then return goal
             let ⟨e, hyps, _, _, _, _, _⟩ := goal.hyps.remove false used.ivar
             return { goal with e, hyps }
           else pure template

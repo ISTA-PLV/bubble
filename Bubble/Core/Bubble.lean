@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Bubble.Core.Types
@@ -28,13 +29,15 @@ structure RisingBubble where
   consumed : Array IrisHyp := #[]
   metaInfo : Array MetaAssignment := #[]
 
-/-- A rising bubble materialized at an ordinary/linear platform or at the root. -/
+-- The central certificate type intentionally shares the project's namespace name.
+set_option linter.iris.dupNamespace false in
+/-- A rising bubble materialized at an unrestricted/linear platform or at the root. -/
 structure Bubble where
   id       : BubbleId
   goal     : GoalId
   consumed : Array IrisHyp
   metaInfo : Array MetaAssignment
-  /- A residual goal may only be replayed after this bubble. -/
+  /- A residual goal may only be reconstructed after this bubble. -/
   pre?     : Option BubbleId := none
   /- What closes the selected forward path. -/
   endKind  : BubbleEnd

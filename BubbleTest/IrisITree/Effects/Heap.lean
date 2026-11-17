@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public import BubbleTest.IrisITree.Effects.State
@@ -169,7 +170,6 @@ theorem wpi_load? M (l : Loc) (v : Val) (dq : DFrac) (Φ : Option Val → IProp 
   iapply wpi_bind; iapply wpi_get
   unfold stateInterp_heap heap_inv
   iintro %σ ⟨Hauth, #Hinv⟩
-
   ihave %Hlookup := ghost_map_lookup $$ Hauth Hpt
   have Hlookup : σ[l]? = some (some v) := by
     simpa [Iris.Std.get?] using Hlookup

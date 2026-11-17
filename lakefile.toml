@@ -2,27 +2,20 @@ name = "bubble"
 version = "0.1.0"
 license = "Apache-2.0"
 defaultTargets = ["Bubble"]
-testDriver = "BubbleTest"
+builtinLint = true
+
+[leanOptions]
+linter.unusedVariables = true
+linter.unusedSectionVars = true
+linter.deprecated = true
+linter.extra.unreachableTactic = true
+linter.extra.unnecessarySeqFocus = true
 
 [[require]]
 name = "iris"
 git = "https://github.com/leanprover-community/iris-lean.git"
-rev = "c851014de2fee12ee3c2cb5cee7e07b5c2b699b0"
+rev = "v4.35.0"
 subDir = "Iris"
-
-[[require]]
-name = "Coinductive"
-git = "https://github.com/ISTA-PLV/coinductive.git"
-rev = "d1aeffe87ec7bd4bd13ed92fdc00ef6c5d58f800"
-
-[[require]]
-name = "aesop"
-git = "https://github.com/leanprover-community/aesop.git"
-rev = "v4.32.0"
 
 [[lean_lib]]
 name = "Bubble"
-
-[[lean_lib]]
-name = "BubbleTest"
-globs = ["BubbleTest.+"]

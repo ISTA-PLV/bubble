@@ -1,7 +1,8 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
-public meta import Lean.Meta.Basic
 public import Iris.ProofMode.Expr
+public meta import Lean.Meta.Basic
 public meta import Bubble.Rule.Types
 
 public meta section
@@ -89,7 +90,7 @@ abbrev GroupId  := NodeId .group
 
 inductive PlatKind
   | single
-  | ordinary
+  | unrestricted
   | linear
   deriving Repr, Inhabited, BEq
 
@@ -98,15 +99,15 @@ namespace PlatKind
 instance : ToString PlatKind where
   toString
     | .single => "single"
-    | .ordinary => "ordinary"
+    | .unrestricted => "unrestricted"
     | .linear => "linear"
 
 def isSingle : PlatKind → Bool
   | .single => true
   | _ => false
 
-def isOrdinary : PlatKind → Bool
-  | .ordinary => true
+def isUnrestricted : PlatKind → Bool
+  | .unrestricted => true
   | _ => false
 
 def isLinear : PlatKind → Bool

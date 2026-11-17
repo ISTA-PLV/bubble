@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Iris.ProofMode.Tactics.Basic
@@ -60,7 +61,7 @@ private meta def parseSuccessProbability (p : Syntax) : TermElabM Percent := do
 private meta def parseRuleDecl (declStx : Syntax) : TermElabM Name := do
   Lean.Elab.realizeGlobalConstNoOverloadWithInfo declStx
 
-private meta def parseRuleDirection (stx : Syntax) : TermElabM RuleBuilderKind := do
+private meta def parseRuleDirection (stx : Syntax) : TermElabM RuleDirection := do
   match stx with
   | `(ibubbleRuleDirection| backward) => pure .backward
   | `(ibubbleRuleDirection| forward) => pure .forward
@@ -70,25 +71,25 @@ private meta def parseLocalRule (stx : Syntax) : TermElabM LocalTheoremRule := d
   match stx with
   | `(ibubbleLocalRule| $declStx:ident) =>
       return {
-        kind := .backward
+        direction := .backward
         decl := ← parseRuleDecl declStx
         action := .insert .hundred
       }
   | `(ibubbleLocalRule| $declStx:ident $p:num %) =>
       return {
-        kind := .backward
+        direction := .backward
         decl := ← parseRuleDecl declStx
         action := .insert (← parseSuccessProbability p)
       }
   | `(ibubbleLocalRule| $dir:ibubbleRuleDirection $declStx:ident) =>
       return {
-        kind := ← parseRuleDirection dir
+        direction := ← parseRuleDirection dir
         decl := ← parseRuleDecl declStx
         action := .insert .hundred
       }
   | `(ibubbleLocalRule| $dir:ibubbleRuleDirection $declStx:ident $p:num %) =>
       return {
-        kind := ← parseRuleDirection dir
+        direction := ← parseRuleDirection dir
         decl := ← parseRuleDecl declStx
         action := .insert (← parseSuccessProbability p)
       }
@@ -98,13 +99,13 @@ private meta def parseErasedRule (stx : Syntax) : TermElabM LocalTheoremRule := 
   match stx with
   | `(ibubbleErasedRule| $declStx:ident) =>
       return {
-        kind := .backward
+        direction := .backward
         decl := ← parseRuleDecl declStx
         action := .erase
       }
   | `(ibubbleErasedRule| $dir:ibubbleRuleDirection $declStx:ident) =>
       return {
-        kind := ← parseRuleDirection dir
+        direction := ← parseRuleDirection dir
         decl := ← parseRuleDecl declStx
         action := .erase
       }

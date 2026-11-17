@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Lean.Elab.Tactic.Basic
@@ -20,7 +21,7 @@ inductive NormSeqResult where
   | unchanged
   deriving Inhabited
 
-/-- Observe one successful normalization step without coupling search to replay data. -/
+/-- Observe one successful normalization step without coupling search to reconstruction data. -/
 abbrev NormStepObserver := Meta.SavedState → MVarId → TSyntax `tactic →
   Meta.SavedState → Array MVarId → TacticM Unit
 

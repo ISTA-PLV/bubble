@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 import Iris.ProofMode
@@ -54,7 +55,7 @@ theorem wpi_fork M (Φ : PUnit → PROP) :
   simp [concH]
   iapply fupd_mask_intro (by simp); iintro Hm
   isplitr [Ht]
-  · imod Hm; iapply wpi_pure $$ [$]
+  · imod Hm; iapply (wpi_pure (H := H) M Φ PUnit.unit) $$ [$]
   · imod Ht; imodintro;
     iapply wpi_bind'
     iapply wpi_wand $$ [$]; iintro %_ _

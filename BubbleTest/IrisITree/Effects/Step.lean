@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 import Iris.ProofMode
@@ -104,9 +105,7 @@ open ITree.Exec
 
 variable {GF : BundledGFunctors} [InvGS GF]
 
-attribute [local simp] stepH
-attribute [local simp] stepEH
-attribute [local simp] Nat.zero_le
+attribute [local simp] stepH stepEH Nat.zero_le
 
 /-- Executing an identity-interpreted step requires no later credits. -/
 instance stepEH_ident_adequate :

@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Std.Data.TreeMap
@@ -15,7 +16,7 @@ abbrev RappTree := Std.TreeMap RappId RappRef compare
 abbrev GoalTree := Std.TreeMap GoalId GoalRef compare
 
 /--
-  Runtime arena for speculative nodes, fresh identifiers, and the replay
+  Runtime arena for speculative nodes, fresh identifiers, and the reconstruction
   certificate selected by search. The graph edges remain in Goal/Rapp/Plat.
 -/
 structure SearchStore where

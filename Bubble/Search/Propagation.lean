@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Bubble.Core.Plat
@@ -120,7 +121,7 @@ private partial def passThroughRapp (rappRef : RappRef) (rising : RisingBubble) 
       return
   let consumed ← propagateFootprint rising.consumed
     rapp.generatedSpatialHyps rapp.consumedSpatialHyps
-  -- Rapp's nodeId needed to be recorded for replay procedure
+  -- Rapp's nodeId needed to be recorded for proof reconstruction
   passThroughGoal rapp.parent {
     rising with forward := #[rapp.id] ++ rising.forward, consumed, metaInfo
   }
@@ -128,7 +129,7 @@ private partial def passThroughRapp (rappRef : RappRef) (rising : RisingBubble) 
 /--
   A rising bubble can pass through three kinds of platforms:
   (1) single: treat the platform as transparent;
-  (2) ordinary: register the bubble;
+  (2) unrestricted: register the bubble;
   (3) linear: register the bubble, enforce linearity restrictions, and consider generating
       dependent groups.
 -/

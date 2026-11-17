@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public import Iris.ProofMode.Expr
@@ -19,7 +20,7 @@ structure GoalData (RappRef PlatRef : Type) : Type where
   children : Array RappRef
   depth : Nat
   slot : GoalSlot
-  /- Bubble that must be replayed before this residual goal. -/
+  /- Bubble that must be reconstructed before this residual goal. -/
   pre? : Option BubbleId := none
 
   -- Turn true because of reaching the search depth limit
@@ -33,7 +34,7 @@ structure GoalData (RappRef PlatRef : Type) : Type where
   addedInIteration : Iteration
   lastExpandedInIteration : Iteration
 
-  /- `none` <=> not norm; `some queue` stores the untried rules, which can be empty. -/
+  /- `none` <=> not norm; `some queue` stores the untried rules, which may be empty. -/
   rulesQueue? : Option RuleQueue := none
   appendiedGoalId : Array GoalId
   deriving Nonempty
@@ -56,7 +57,7 @@ structure RappData (GoalRef PlatRef : Type) : Type where
   parent : GoalRef
   children : PlatRef
 
-  appliedRule : Rule RuleInfo
+  appliedRule : Rule
 
   /- Spatial hypotheses generated/removed by this rule application. -/
   usedHyps : Array AppliedHyp

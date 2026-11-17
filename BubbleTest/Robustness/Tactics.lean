@@ -38,7 +38,7 @@ meta def destructSeps : Aesop.RuleTac := fun input =>
   input.goal.withContext do
     let target ← input.goal.getType
     let some irisGoal := parseIrisGoal? target | return ⟨#[]⟩
-    for ivar in irisGoal.hyps.spatialIVarIds do
+    for ivar in irisGoal.hyps.spatialIVarIds .topToBottom do
       let some name := irisGoal.hyps.getUserName? ivar | continue
       let term : TSyntax `term := ⟨(mkIdent name).raw⟩
       let pmt ← `(pmTerm| $term:term)
@@ -99,7 +99,7 @@ meta def enumerateSplits : Aesop.RuleTac := fun input =>
     -- Check applicability once, before enumerating 2^n partitions. In
     -- particular, atomic goals must not pay the enumeration cost.
     unless ← canSplit irisGoal do return ⟨#[]⟩
-    let names := irisGoal.hyps.spatialIVarIds.filterMap irisGoal.hyps.getUserName?
+    let names := (irisGoal.hyps.spatialIVarIds .topToBottom).filterMap irisGoal.hyps.getUserName?
     return ⟨← splitApplications input names #[]⟩
 
 /-- Aesop with exhaustive eager enumeration of all `2^n` context splits. -/

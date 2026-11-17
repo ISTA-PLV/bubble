@@ -1,12 +1,13 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Bubble.Rule.Tactic.Basic
 
 public meta section
 
-namespace Bubble.Rule.Tactic.IPureIntro
+namespace Bubble.Tactic.IPureIntro
 
-open Lean Elab Tactic Meta
+open Lean Elab Lean.Elab.Tactic Meta
 
 private def openGoals (goals : List MVarId) : MetaM (Array MVarId) := do
   goals.foldlM (init := #[]) fun result goal => do
@@ -15,7 +16,7 @@ private def openGoals (goals : List MVarId) : MetaM (Array MVarId) := do
 
 def run (input : RuleInput) : TacticM RuleOutput := do
   input.state.restore
-  let before ← Tactic.saveState
+  let before ← Lean.Elab.Tactic.saveState
   try
     let tactic ← `(tactic| ipureintro)
     let generated ← withSuppressedMessages <| evalTacticAt tactic input.goal
@@ -49,4 +50,4 @@ def run (input : RuleInput) : TacticM RuleOutput := do
     before.restore
     return RuleOutput.ofSpecs #[]
 
-end Bubble.Rule.Tactic.IPureIntro
+end Bubble.Tactic.IPureIntro

@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public import BubbleTest.IrisITree.Core.Handler
@@ -178,9 +179,7 @@ section lfp_tp_lemmas
 variable {PROP : Type _} [BI PROP] [BIAffine PROP] {α : Type _}
   (F : (α → PROP) → (α → PROP))
 
-attribute [local simp] bi_close
-attribute [local simp] lfp_tp
-attribute [local simp] lfp_tpF
+attribute [local simp] bi_close lfp_tp lfp_tpF
 
 theorem lfp_tp_unfold (Ms : List ((α → PROP) → PROP)) :
     lfp_tp F Ms ⊣⊢ lfp_tpF F (λ Ms => lfp_tp F Ms.car) ⟨Ms⟩ :=
@@ -378,7 +377,6 @@ theorem lfp_tp_intro (G : (α → PROP) → (α → PROP)) (x : α) :
       have Heq : x1 = x2 := OFE.Discrete.discrete Hx
       subst Heq; rfl
   ⟩
-
   have Hlist : ∀ Ms : List ((α → PROP) → PROP),
       ⊢ ([∗list] M ∈ Ms, M (λ x => lfp_tp G [λ P => P x])) -∗ lfp_tp G Ms := by
     iintro %Ms HMs

@@ -1,12 +1,13 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Bubble.Rule.Tactic.Basic
 
 public meta section
 
-namespace Bubble.Rule.Tactic.IExist
+namespace Bubble.Tactic.IExist
 
-open Lean Elab Tactic Meta
+open Lean Elab Lean.Elab.Tactic Meta
 
 private def openGoals (goals : List MVarId) : MetaM (Array MVarId) := do
   goals.foldlM (init := #[]) fun result goal => do
@@ -28,7 +29,7 @@ private def solveIndependentAuxGoals (goals : Array MVarId) : TacticM Unit := do
       if other == goal || (← other.isAssignedOrDelayedAssigned) then return false
       return (← other.withContext other.getMVarDependencies).contains goal
     if referenced then continue
-    let before ← Tactic.saveState
+    let before ← Lean.Elab.Tactic.saveState
     try
       let tactic ← `(tactic| assumption)
       let generated ← withSuppressedMessages <| evalTacticAt tactic goal
@@ -39,7 +40,7 @@ private def solveIndependentAuxGoals (goals : Array MVarId) : TacticM Unit := do
 
 def run (input : RuleInput) : TacticM RuleOutput := do
   input.state.restore
-  let before ← Tactic.saveState
+  let before ← Lean.Elab.Tactic.saveState
   try
     let tactic ← `(tactic| iexists _)
     let generated ← withSuppressedMessages <| evalTacticAt tactic input.goal
@@ -59,4 +60,4 @@ def run (input : RuleInput) : TacticM RuleOutput := do
     before.restore
     return RuleOutput.ofSpecs #[]
 
-end Bubble.Rule.Tactic.IExist
+end Bubble.Tactic.IExist

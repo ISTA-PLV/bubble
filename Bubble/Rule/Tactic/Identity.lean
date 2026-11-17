@@ -1,10 +1,11 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Bubble.Rule.Tactic.Basic
 
 public meta section
 
-namespace Bubble.Rule.Tactic.Identity
+namespace Bubble.Tactic.Identity
 
 open Lean Meta Qq
 open Iris.ProofMode
@@ -42,4 +43,4 @@ def run (input : RuleInput) : Lean.Elab.Tactic.TacticM RuleOutput := do
       effect := { multiGoalAction? := some .partitionContext }
     }
 
-end Bubble.Rule.Tactic.Identity
+end Bubble.Tactic.Identity

@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public import BubbleTest.IrisITree.Core.Wpi
@@ -471,5 +472,3 @@ theorem wp_faa {M : CoPset} (l : Loc) (i₁ i₂ : Int) (Φ : Val → IProp GF) 
 end heap_rules
 
 end wp_rules
-
-attribute [simp] LawfulMonad.bind_pure_comp

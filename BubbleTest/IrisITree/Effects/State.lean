@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 import Iris.ProofMode
@@ -64,7 +65,7 @@ theorem wpi_stateE_set Ms Me s' (Φ : PUnit → PROP) :
   iintro %s Hs; imod Hm
   imod Hw $$ [$] with ⟨$, _⟩
   iapply fupd_mask_intro (by simp); iintro >_
-  iapply wpi_pure $$ [$]
+  iapply (wpi_pure (H := H) Me Φ PUnit.unit) $$ [$]
 
 theorem wpi_set Ms Me s' (Φ : PUnit → PROP) :
     (∀ s, stateInterp s ={Ms, Me}=∗ stateInterp s' ∗ Φ ⟨⟩) -∗

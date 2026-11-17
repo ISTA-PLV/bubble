@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Iris.ProofMode.Expr
@@ -8,8 +9,7 @@ public meta section
 
 namespace Bubble
 
-open Lean Meta Elab Tactic
-open Iris.ProofMode
+open Lean Meta Elab Tactic Iris.ProofMode
 
 structure RuleInput where
   goal : MVarId

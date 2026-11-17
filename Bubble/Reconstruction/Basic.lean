@@ -1,8 +1,9 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
+public import Batteries.Tactic.PermuteGoals
 public meta import Lean.Elab.Tactic
 public meta import Lean.Meta.Tactic.TryThis
-public import Batteries.Tactic.PermuteGoals
 public meta import Batteries.Lean.Meta.SavedState
 
 public meta section
@@ -115,7 +116,7 @@ namespace ScriptStep
 def render (acc : Array (TSyntax `tactic)) (step : ScriptStep)
     (tacticState : TacticState) :
     MetaM (Array (TSyntax `tactic) × TacticState) := do
-  /- Metavariable goals can be solved indirectly while replaying a sibling. -/
+  /- Metavariable goals can be solved indirectly while reconstructing a sibling proof. -/
   let tacticState ← tacticState.retainOpen step.preState
   let pos ← tacticState.getVisibleGoalIndex step.preGoal
   let focusTactic? ←
@@ -155,10 +156,6 @@ end UScript
 
 def addTryThisTacticSeqSuggestion (ref : Syntax)
     (tacs : Array (TSyntax `tactic)) : MetaM Unit := do
-  /- Render one tactic per line, indented to the column of `ibubble?` (i.e. the
-  surrounding tactic-block level). Building the text ourselves avoids the extra
-  indentation level that a `tacticSeq` adds, which would otherwise push the
-  inserted proof one tab too deep. -/
   let map ← getFileMap
   let col := match ref.getPos? with
     | some pos => (map.toPosition pos).column

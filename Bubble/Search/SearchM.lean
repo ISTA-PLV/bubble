@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Bubble.Core.TreeM
@@ -14,7 +15,7 @@ namespace SearchM
 
 structure Context where
   config : SearchConfig
-  ruleIndex : Index RuleInfo
+  ruleIndex : Index
 
 structure State (Q : Type) where
   iteration : Iteration := 1
@@ -30,7 +31,7 @@ namespace SearchM
 
 variable {Q : Type} [Queue Q]
 
-def run (config : SearchConfig) (ruleIndex : Index RuleInfo)
+def run (config : SearchConfig) (ruleIndex : Index)
     (goal : MVarId) (action : SearchM Q α) :
     Lean.Elab.Tactic.TacticM (α × State Q × SearchStore) := do
   let store ← mkInitialStore goal
@@ -43,7 +44,7 @@ def run (config : SearchConfig) (ruleIndex : Index RuleInfo)
 def getConfig : SearchM Q SearchConfig :=
   return (← readThe Context).config
 
-def getRuleIndex : SearchM Q (Index RuleInfo) :=
+def getRuleIndex : SearchM Q Index :=
   return (← readThe Context).ruleIndex
 
 def getIteration : SearchM Q Iteration :=

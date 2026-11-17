@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 import Iris.BI.Lib.Fixpoint
@@ -10,7 +11,8 @@ public import BubbleTest.IrisITree.Core.Handler
 import BubbleTest.IrisITree.Core.ITree
 
 namespace IrisITree.Core
-open Iris Iris.BI ITree
+
+open Iris BI ITree ProofMode
 
 variable {PROP : Type _} [BI PROP] [BIFUpdate PROP]
 
@@ -220,7 +222,6 @@ theorem wpi_trigger_bind {E' A} [E' -< E] (H' : IHandler PROP E') [InH H' H]
   · iintro %r $
   · iintro !> %a $
   · iapply InH.is_inH $$ HH
-    /- [Note]: `HH` is needed to infer the source event hidden by `Subeffect.map` -/
 
 theorem wpi_trigger {E'} [E' -< E] (H' : IHandler PROP E') [InH H' H]
     (i : E'.I) (Φ : E'.O i → PROP) :
@@ -336,8 +337,7 @@ theorem wpi_wand (Φ Ψ : R → PROP) :
 
 theorem wpi_fupd_empty_2 (Φ : R → PROP) :
     WPi t @> H; Ms, ∅ {{ v, iprop(|={∅, Me}=> Φ v) }} ⊢
-    WPi t @> H; Ms, Me {{ Φ }}
-     := by
+    WPi t @> H; Ms, Me {{ Φ }} := by
   iintro >Hwp
   let G := λ t (Ψ : R → PROP) =>
     iprop(∀ Φ, (∀ r, Ψ r -∗ |={∅, Me}=> Φ r) -∗ WPi t @> H;∅,Me {{ Φ }})
@@ -362,8 +362,7 @@ theorem wpi_fupd_empty_2 (Φ : R → PROP) :
 
 theorem wpi_fupd_empty_1 (Φ : R → PROP) :
     WPi t @> H; Ms, Me {{ Φ }} ⊢
-    WPi t @> H; Ms, ∅ {{ v, iprop(|={∅, Me}=> Φ v) }}
-     := by
+    WPi t @> H; Ms, ∅ {{ v, iprop(|={∅, Me}=> Φ v) }} := by
   iintro >Hwp
   let G := λ t (Ψ : R → PROP) =>
     WPi t @> H; ∅,∅ {{ v, iprop(|={∅, Me}=> Ψ v) }}

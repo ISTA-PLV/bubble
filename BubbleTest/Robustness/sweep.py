@@ -207,7 +207,7 @@ def _run_case(tactic: str, size: int, seed: int, shuffle: int,
 
     # -DElab.async=false is essential: without it `#time` measures the theorem
     # header rather than the tactic.
-    command = ["lake", "env", "lean", "-DElab.async=false",
+    command = ["lake", "-d", "tests", "env", "lean", "-DElab.async=false",
                f"-DmaxRecDepth={MAX_REC_DEPTH}", str(lean_path.resolve())]
     # Own process group, so a timeout kills the whole `lake` -> `lean` tree rather
     # than just `lake`, which would leave `lean` running and skew concurrent cases.

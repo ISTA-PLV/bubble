@@ -1,16 +1,17 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Iris.ProofMode
-public meta import Bubble.Replay.Normalization
+public meta import Bubble.Reconstruction.Normalization
 public meta import Bubble.Search.Names
 
 public meta section
 
-namespace Bubble.Replay
+namespace Bubble.Reconstruction
 
 open Lean Lean.Elab.Tactic Lean.Meta
 open Iris.ProofMode
-open ReplayM
+open ReconM
 
 private def appliedHypIdent? : AppliedHyp → Option (TSyntax `ident)
   | .spatial hyp | .intuitionistic hyp => some (mkIdent hyp.name)
@@ -38,12 +39,12 @@ private def mkRuleApplicationTactic (rapp : Rapp)
     (splits : Array (Array IrisHyp)) (childCount : Nat)
     (config : SearchConfig) : MetaM (TSyntax `tactic) := do
   let fallback ← `(tactic| skip)
-  match rapp.appliedRule.info.builder with
+  match rapp.appliedRule.id.builder with
   | .backward _ =>
       let premiseSplits := splits.extract 0 (splits.size - 1)
       let decl := mkIdent rapp.appliedRule.id.name.eraseMacroScopes
       mkIApply decl premiseSplits
-  | .forward => pure fallback
+  | .forward _ => pure fallback
   | .tactic .ipureIntro =>
       if config.pureStop? then `(tactic| ipureintro)
       else
@@ -96,9 +97,9 @@ private def mkRuleApplicationTactic (rapp : Rapp)
             `(tactic| ihave $generated:ident := $used:term $$ $patterns:specPat*)
       | _, _ => pure fallback
 
-/-- Separate replay-generated Iris goals from ordinary Lean goals. -/
+/-- Separate Iris goals produced during reconstruction from ordinary Lean goals. -/
 private def classifyGoals (goals : Array MVarId) :
-    ReplayM (Array MVarId × Array MVarId) := do
+    ReconM (Array MVarId × Array MVarId) := do
   goals.foldlM (init := (#[], #[])) fun (iris, lean) goal => do
     if ← goal.isAssignedOrDelayedAssigned then return (iris, lean)
     let irisGoal? ← goal.withContext do
@@ -113,7 +114,7 @@ private def classifyGoals (goals : Array MVarId) :
   allowing irrelevant witnesses to be recovered from the local Lean context.
 -/
 private def solveIndependentAuxGoals (irisGoals otherGoals : Array MVarId) :
-    ReplayM (Array MVarId) := do
+    ReconM (Array MVarId) := do
   let allGoals := irisGoals ++ otherGoals
   let mut remaining := #[]
   for goal in otherGoals do
@@ -133,10 +134,10 @@ private def solveIndependentAuxGoals (irisGoals otherGoals : Array MVarId) :
     let tactic ← `(tactic| assumption)
     let solved ← try
       let generated ← withSuppressedMessages <| evalTacticAt tactic goal
-      let generated ← ReplayM.openGoals generated.toArray
+      let generated ← ReconM.openGoals generated.toArray
       if (← goal.isAssignedOrDelayedAssigned) && generated.isEmpty then
         let postState ← liftM (m := MetaM) saveState
-        ReplayM.appendScript #[{
+        ReconM.appendScript #[{
           preState, preGoal := goal, tactic, postState, postGoals := generated
         }]
         pure true
@@ -149,9 +150,9 @@ private def solveIndependentAuxGoals (irisGoals otherGoals : Array MVarId) :
     unless solved do remaining := remaining.push goal
   return remaining
 
-/-- Discharge replay-generated pure Lean goals with the configured solver. -/
-private def solvePureGoals (goals : Array MVarId) : ReplayM (Array MVarId) := do
-  let config ← ReplayM.getConfig
+/-- Discharge pure Lean goals produced during reconstruction with the configured solver. -/
+private def solvePureGoals (goals : Array MVarId) : ReconM (Array MVarId) := do
+  let config ← ReconM.getConfig
   let mut remaining := #[]
   for goal in goals do
     if ← goal.isAssignedOrDelayedAssigned then continue
@@ -163,38 +164,34 @@ private def solvePureGoals (goals : Array MVarId) : ReplayM (Array MVarId) := do
     let preState ← liftM (m := MetaM) saveState
     let generated ← withSuppressedMessages <|
       evalTacticAt config.pureSolver goal
-    let generated ← ReplayM.openGoals generated.toArray
+    let generated ← ReconM.openGoals generated.toArray
     unless generated.isEmpty do
-      throwError "ibubble: pure solver left {generated.size} unresolved replay goal(s)"
+      throwError "ibubble: pure solver left {generated.size} unresolved reconstruction goal(s)"
     let postState ← liftM (m := MetaM) saveState
-    ReplayM.appendScript #[{
+    ReconM.appendScript #[{
       preState, preGoal := goal, tactic := ⟨config.pureSolver⟩,
       postState, postGoals := generated
     }]
   return remaining
 
-/-- Replay one recorded rule application and return its Iris children and unrelated goals. -/
-def replayRuleApplication (focus : MVarId) (goal : Goal) (rappRef : RappRef)
+/-- Reconstruct one recorded rule application and return its Iris children and unrelated goals. -/
+def reconstructRuleApplication (focus : MVarId) (goal : Goal) (rappRef : RappRef)
     (children : Array BubbleId) (expectedChildren : Nat := children.size)
     (singleChildConsumed? : Option (Array IrisHyp) := none) :
-    ReplayM (Array MVarId × Array MVarId) := do
+    ReconM (Array MVarId × Array MVarId) := do
   let (normalizedFocus, normRemaining) ← normalizeForRuleApplication focus goal
   let rapp ← rappRef.get
   let plat ← rapp.children.get
-  let unaryApplyHyps := match rapp.appliedRule.info.builder with
+  let unaryApplyHyps := match rapp.appliedRule.id.builder with
     | .tactic .applyHyps => true
     | _ => false
   let unaryContextUsed := singleChildConsumed?.any fun consumed => !consumed.isEmpty
-  let config ← ReplayM.getConfig
+  let config ← ReconM.getConfig
   let splits ←
     if plat.kind.isLinear && children.size > 1 then
-      children.mapM λ id => return (← ReplayM.getBubble id).consumed
+      children.mapM λ id => return (← ReconM.getBubble id).consumed
     else if config.generateScript? && plat.kind.isSingle && expectedChildren == 1 &&
         unaryApplyHyps && unaryContextUsed then
-      /- A unary `iapply` still benefits from an explicit context. Since its
-      sole child receives the whole remaining spatial context, reconstruct
-      that context directly and omit any spatial hypothesis consumed by the
-      application itself. -/
       let spatial ← Bubble.Search.spatialHypsOf normalizedFocus
       let usedName? : Option Name := match rapp.usedHyp? with
         | some (.spatial hyp) | some (.intuitionistic hyp) => some hyp.name
@@ -206,11 +203,6 @@ def replayRuleApplication (focus : MVarId) (goal : Goal) (rappRef : RappRef)
     else
       pure #[]
   let plainTactic ← mkRuleApplicationTactic rapp #[] expectedChildren config
-  /- A unary specialization can make the replayed script substantially more
-  informative, but it is not interchangeable with a bare `iapply`: in
-  particular, it may specialize a wand before a surrounding modality has been
-  handled.  Try the more explicit form in an isolated metavariable state and
-  keep it only when it produces the same number of Iris child goals. -/
   let explicitUnary :=
     config.generateScript? && plat.kind.isSingle && expectedChildren == 1 &&
       unaryApplyHyps && unaryContextUsed
@@ -221,27 +213,27 @@ def replayRuleApplication (focus : MVarId) (goal : Goal) (rappRef : RappRef)
     let probeState ← liftM (m := MetaM) saveState
     let accepted ← try
       let generated ← withSuppressedMessages <| evalTacticAt candidate normalizedFocus
-      let generated ← ReplayM.openGoals generated.toArray
+      let generated ← ReconM.openGoals generated.toArray
       let (irisGoals, _) ← classifyGoals generated
       pure (irisGoals.size == expectedChildren)
     catch _ => pure false
     probeState.restore
     pure (if accepted then candidate else plainTactic)
-  trace[ibubble.replay]
+  trace[ibubble.reconstruction]
     "Rapp {rapp.id}, rule {rapp.appliedRule.id}: {tactic}"
   let preState ← liftM (m := MetaM) saveState
   let generated ← withSuppressedMessages <|
     evalTacticAt tactic normalizedFocus
-  let generated ← ReplayM.openGoals generated.toArray
+  let generated ← ReconM.openGoals generated.toArray
   let postState ← liftM (m := MetaM) saveState
-  ReplayM.appendScript #[{
+  ReconM.appendScript #[{
     preState, preGoal := normalizedFocus, tactic, postState, postGoals := generated
   }]
   let (irisGoals, leanGoals) ← classifyGoals generated
   let leanGoals ← solveIndependentAuxGoals irisGoals leanGoals
   let leanGoals ← solvePureGoals leanGoals
   if irisGoals.size != expectedChildren then
-    throwError "ibubble: replay of Rapp {rapp.id} produced {irisGoals.size} Iris goals, expected {expectedChildren}"
+    throwError "ibubble: reconstruction of Rapp {rapp.id} produced {irisGoals.size} Iris goals, expected {expectedChildren}"
   return (irisGoals, normRemaining ++ leanGoals)
 
-end Bubble.Replay
+end Bubble.Reconstruction

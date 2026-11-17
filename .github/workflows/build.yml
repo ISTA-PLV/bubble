@@ -1,4 +1,6 @@
-name: Build and test Bubble
+# SPDX-License-Identifier: Apache-2.0
+
+name: Build, test, and lint Bubble
 
 on:
   push:
@@ -17,4 +19,11 @@ jobs:
       - uses: actions/checkout@v7
       - uses: leanprover/lean-action@v1
         with:
-          build-args: "Bubble BubbleTest"
+          build: "true"
+          test: "false"
+          lint: "true"
+          use-mathlib-cache: "false"
+      - name: Test and lint the test package
+        run: |
+          lake -d tests test
+          lake -d tests lint BubbleTest

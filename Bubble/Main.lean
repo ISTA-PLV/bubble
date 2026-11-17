@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Bubble.Core.Bubble
@@ -11,11 +12,11 @@ public meta section
 
 namespace Bubble
 
-open Lean Elab Tactic Iris
+open Lean Elab Lean.Elab.Tactic Iris
 
 register_option ibubble.timing : Bool := {
   defValue := false
-  descr := "report the time spent in Bubble search and proof replay"
+  descr := "report the time spent in Bubble search and proof reconstruction"
 }
 
 @[tactic ibubbleTactic, tactic ibubbleTactic?]

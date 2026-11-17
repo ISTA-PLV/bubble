@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public import BubbleTest.IrisITree.Core.ITree
@@ -159,7 +160,6 @@ theorem wpi_adequate_ind (Φ : R → PROP)
     fun _ _ _ HMs => by cases HMs; rfl
   ⟩
   unfold wpi_tp; iintro Htp; irevert %t %s %M %Mss %C %Hexec %HMs
-  -- TODO: Find a way to shorten the `iapply`?
   iapply (lfp_tp_ind (wpiConstF H Φ) (λ Ms => iprop(
     ∀ (t : ITree E R) (s : σ) (M : (ITree E R → PROP) → PROP)
       (Mss : List ((ITree E R → PROP) → PROP)) (C : ITree E R → σ → Prop),
@@ -248,7 +248,7 @@ theorem wpi_adequate_pure (hlc : HasLC) (n : Nat) (m : CoPset)
   intro Hexec Hwp
   apply pure_soundness (PROP := IProp GF)
   apply step_fupdN_soundness (hlc := hlc) 0 n
-  simp only [Nat.repeat]
+  simp only [step_fupdN]
   iintro %Hinv Hlc
   imod Hwp Hinv $$ Hlc with ⟨%H, %A, %Φ, Hwpi, Hs, Hc⟩
   imod wpi_adequate H EH Φ t s C m Hexec $$ Hwpi Hs with

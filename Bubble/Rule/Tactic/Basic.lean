@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Qq
@@ -7,9 +8,9 @@ public meta import Bubble.Search.Names
 
 public meta section
 
-namespace Bubble.Rule.Tactic
+namespace Bubble.Tactic
 
-open Lean Elab Tactic Meta Qq Std
+open Lean Elab Lean.Elab.Tactic Meta Qq Std
 open Iris.ProofMode
 
 initialize registerTraceClass `ibubble.rule
@@ -46,4 +47,4 @@ def spatialDiff (pre post : IrisGoal) : MetaM (Array IrisHyp × Array IrisHyp) :
       generated := generated.push { name := postName, ivar := postIVar }
   return (consumed, generated)
 
-end Bubble.Rule.Tactic
+end Bubble.Tactic

@@ -1,10 +1,11 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public meta import Lean.Util.Profile
-public meta import Bubble.Replay.Main
+public meta import Bubble.Index.Query
+public meta import Bubble.Reconstruction.Main
 public meta import Bubble.Rule.Index
-public meta import Bubble.Rule.Tactic.Main
-public meta import Bubble.Rule.Selection
+public meta import Bubble.Rule.Main
 public meta import Bubble.Search.Commit
 public meta import Bubble.Search.Propagation
 
@@ -12,7 +13,7 @@ public meta section
 
 namespace Bubble.Search
 
-open Lean Meta Std Elab Tactic
+open Lean Meta Std Elab Lean.Elab.Tactic
 
 initialize registerTraceClass `ibubble.search
 
@@ -42,8 +43,8 @@ private partial def theoremUsesOnPath (goalRef : GoalRef) (decl : Name) : Search
   let some parentRappRef := platform.parent? | return 0
   let parentRapp ← parentRappRef.get
   let parentRule := parentRapp.appliedRule
-  let usedHere := match parentRule.info.builder with
-    | .backward _ | .forward => if parentRule.id.name == decl then 1 else 0
+  let usedHere := match parentRule.id.builder with
+    | .backward _ | .forward _ => if parentRule.id.name == decl then 1 else 0
     | .tactic _ => 0
   return usedHere + (← theoremUsesOnPath parentRapp.parent decl)
 
@@ -51,10 +52,9 @@ private partial def theoremUsesOnPath (goalRef : GoalRef) (decl : Name) : Search
 private def runRule (goalRef : GoalRef) (matchResult : RuleMatch) :
     SearchM Q RuleCommitResult := do
   let config ← SearchM.getConfig
-  trace[ibubble.search]
-    "goal {(← goalRef.get).id} trying rule {matchResult.rule.id}"
-  let theoremUses? ← match matchResult.rule.info.builder with
-  | .backward _ | .forward =>
+  trace[ibubble.search] "goal {(← goalRef.get).id} trying rule {matchResult.rule.id}"
+  let theoremUses? ← match matchResult.rule.id.builder with
+  | .backward _ | .forward _ =>
       let uses ← theoremUsesOnPath goalRef matchResult.rule.id.name
       if uses >= config.maxTheoremUses then
         trace[ibubble.search]
@@ -66,39 +66,49 @@ private def runRule (goalRef : GoalRef) (matchResult : RuleMatch) :
   let some input ← mkRuleInput config goalRef matchResult
     | return .failed
   input.state.restore
-  let output ← input.goal.withContext <|
-    matchResult.rule.info.builder.run input
+  let output ← input.goal.withContext <| matchResult.rule.id.builder.run input
   if output.rappSpecs.isEmpty then
     trace[ibubble.search] "rule {matchResult.rule.id} did not apply to goal {(← goalRef.get).id}"
   else
-    trace[ibubble.search]
-      m!"rule {matchResult.rule.id} produced {output.rappSpecs.size}" ++
+    trace[ibubble.search] m!"rule {matchResult.rule.id} produced {output.rappSpecs.size}" ++
       m!" application candidate(s) for goal {(← goalRef.get).id}"
   let usedRule := match theoremUses? with
     | some uses =>
       /- Multiple use theorem should be given penalty. -/
         let penalty := Percent.medium ^ uses
-        { matchResult.rule with info := {
-          matchResult.rule.info with
-          successProbability := matchResult.rule.info.successProbability * penalty
-        } }
+        { matchResult.rule with successProb := matchResult.rule.successProb * penalty }
     | none => matchResult.rule
   if !output.rappSpecs.isEmpty && theoremUses?.getD 0 > 0 then
-    trace[ibubble.search]
-      m!"penalized theorem {matchResult.rule.id.name}: {theoremUses?.getD 0}" ++
-      m!" previous use(s), effective probability {usedRule.info.successProbability}"
+    trace[ibubble.search] m!"penalized theorem {matchResult.rule.id.name}: {theoremUses?.getD 0}" ++
+      m!" previous use(s), effective probability {usedRule.successProb}"
   let result ← commitRuleOutput goalRef usedRule output
   match result with
-  | .applied closedRapps =>
-      /- Emit bubbles for closed Rapps upward. -/
-      closedRapps.forM emitRappBubble
+  | .applied closedRapps => closedRapps.forM emitRappBubble
   | .failed => pure ()
   return result
+
+/-- Return cached rule candidates or query the index for the normalized goal. -/
+private def getRuleCandidates (parentRef : GoalRef) : SearchM Q RuleQueue := do
+  let parent ← parentRef.get
+  match parent.rulesQueue? with
+  | some queue => return queue
+  | none =>
+      let index ← SearchM.getRuleIndex
+      let goal := parent.normalizationState.normalizedGoal?.getD parent.preNormGoal
+      let state := match parent.normalizationState with
+        | .notNormal => parent.preNormState
+        | .normal _ postState .. => postState
+        | .provenByNorm postState .. => postState
+      let previousState ← liftM (m := MetaM) saveState
+      state.restore
+      let results ← Index.queryMVar index goal
+      previousState.restore
+      return RuleQueue.ofArray results
 
 /-- Skip failed candidates and apply the next rule that produces an expansion. -/
 private partial def runNextApplicableRule (goalRef : GoalRef) :
     SearchM Q Unit := do
-  let candidates ← Rule.select goalRef
+  let candidates ← getRuleCandidates goalRef
   let remaining ← pickLoop candidates
   goalRef.modify λ goal => goal.setRulesQueue? (some remaining)
 where
@@ -137,7 +147,7 @@ private partial def searchLoop : SearchM Q (Array MVarId) := do
   checkSystem "ibubble"
   if let some rootBubble ← TreeM.getResult? then
     let config ← SearchM.getConfig
-    return ← Replay.replayProof config rootBubble
+    return ← Reconstruction.reconstructProof config rootBubble
   if ← expandNextGoal then
     SearchM.incrementIteration
     searchLoop
@@ -159,7 +169,7 @@ meta def search (goal : MVarId) (config : SearchConfig := {}) : TacticM (Array M
   let config := {
     config with maxNormIterations := max config.maxNormIterations config.maxDepth
   }
-  let ruleIndex ← Rule.buildIndex config
+  let ruleIndex ← buildIndex config
   /- Pickup the specified strategy according to the configuration. -/
   Queue.withStrategy config.strategy λ Q => do
     let (remaining, _, _) ←

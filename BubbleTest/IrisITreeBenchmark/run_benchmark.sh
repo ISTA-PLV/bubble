@@ -32,8 +32,8 @@ python3 "${script_dir}/count_tactics.py" --csv > "${tactic_csv}"
 python3 "${script_dir}/count_tactics.py" --json > "${tactic_json}"
 
 echo "Preparing shared dependencies and all three case-study variants..." >&2
-if ! lake build > "${log_dir}/warmup.log" 2>&1; then
-  echo "Initial lake build failed; see ${log_dir}/warmup.log" >&2
+if ! lake -d tests build BubbleTest.IrisITree BubbleTest.IrisITreeBubble BubbleTest.IrisITreeScript > "${log_dir}/warmup.log" 2>&1; then
+  echo "Initial test-package build failed; see ${log_dir}/warmup.log" >&2
   exit 1
 fi
 
@@ -58,7 +58,7 @@ variant_target() {
 clean_variant_artifacts() {
   local stem="$1"
   local base
-  for base in ".lake/build/lib/lean/BubbleTest" ".lake/build/ir/BubbleTest"; do
+  for base in "tests/.lake/build/lib/lean/BubbleTest" "tests/.lake/build/ir/BubbleTest"; do
     if [[ -d "${base}" ]]; then
       rm -rf -- "${base}/${stem}"
       find "${base}" -maxdepth 1 -type f -name "${stem}.*" -delete
@@ -80,7 +80,7 @@ target = sys.argv[2]
 started = time.perf_counter()
 with log.open("w", encoding="utf-8") as stream:
     completed = subprocess.run(
-        ["lake", "build", f"+{target}"],
+        ["lake", "-d", "tests", "build", f"+{target}"],
         stdout=stream,
         stderr=subprocess.STDOUT,
         check=False,
@@ -245,7 +245,7 @@ source = sys.argv[2]
 started = time.perf_counter()
 with log.open("w", encoding="utf-8") as stream:
     completed = subprocess.run(
-        ["lake", "env", "lean", "-DElab.async=false", "-Dibubble.timing=true", source],
+        ["lake", "-d", "tests", "env", "lean", "-DElab.async=false", "-Dibubble.timing=true", source],
         stdout=stream,
         stderr=subprocess.STDOUT,
         check=False,

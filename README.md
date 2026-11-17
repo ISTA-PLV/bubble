@@ -2,6 +2,8 @@
 
 This directory contains the anonymized implementation and evaluation material for the paper submission.
 
+Bubble provides the `ibubble` proof-search tactic for Iris Lean.
+
 ## Requirements
 
 - [Elan](https://github.com/leanprover/elan), which installs the pinned Lean
@@ -9,15 +11,47 @@ This directory contains the anonymized implementation and evaluation material fo
 - Python 3, for generating and running the robustness benchmarks
 - NumPy and Matplotlib, only for plotting benchmark results
 
-The Lean version is fixed in `lean-toolchain`. Readers can download the dependencies directly.
+The Lean version is fixed in `lean-toolchain`. Lake downloads the project
+dependencies when needed. Downstream projects can depend on this package and
+`import Bubble`; they do not download Coinductive or build Bubble's test suite.
 
-## Build
+## Build, test, and lint
 
 From this directory, run:
 
 ```sh
 lake build
+lake lint
 ```
+
+These commands build and lint the Bubble library. The tests have a separate Lake
+package in `tests/`, with their own test-only Coinductive and Aesop dependencies. Their Lean
+source files remain in `BubbleTest.lean` and `BubbleTest/`.
+
+To build and lint the complete test suite from the repository root, run:
+
+```sh
+lake -d tests test
+lake -d tests lint BubbleTest
+```
+
+CI builds, tests, and lints both packages.
+
+Linting uses Lean's built-in checks, including unused variables and section
+parameters, deprecated declarations, unreachable tactics, and unnecessary `<;>`
+combinators. The command fails when it finds lint warnings.
+
+## Daily upstream compatibility
+
+Every day at 06:23 UTC, CI builds, tests, and lints two upstream configurations:
+
+- The latest commit on Iris Lean's default branch, using the Lean toolchain that
+  commit declares.
+- The latest Iris commit with Lean's latest official stable release.
+
+The workflow logs the exact Iris commit and Lean toolchain. These checks change
+versions only in the CI checkout; committed dependency pins are unchanged. The
+workflow can also be run manually in GitHub Actions.
 
 ## Evaluation environment
 
@@ -48,7 +82,7 @@ The examples used in Sections 2.1–2.4 and 6 of the paper are collected in
 the corresponding paper sections.
 
 The `wp_store` example from the introduction is available as both a
-[manual proof](BubbleTest/IrisITree/HeapLang/ProgramLogic.lean#L367) and an
+[manual proof](BubbleTest/IrisITree/HeapLang/ProgramLogic.lean#L368) and an
 [`ibubble` proof](BubbleTest/IrisITreeBubble/HeapLang/ProgramLogic.lean#L296).
 
 ## Robustness benchmark
@@ -60,7 +94,7 @@ From this directory, run:
 
 ```sh
 python3 -m pip install matplotlib numpy
-lake build BubbleTest.Robustness
+lake -d tests build BubbleTest.Robustness
 bash BubbleTest/Robustness/run_benchmark.sh
 ```
 
@@ -110,3 +144,7 @@ summarizes the results, and the CSV files contain measurements and summary stati
 
 To resume an interrupted run, repeat the benchmark command without moving
 `results/`; completed measurements are reused.
+
+Copyright (c) 2026 Institute of Science and Technology Austria (ISTA).
+
+Licensed under the Apache License, Version 2.0.

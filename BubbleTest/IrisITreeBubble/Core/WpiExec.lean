@@ -228,7 +228,7 @@ theorem wpi_adequate_pure (hlc : HasLC) (n : Nat) (m : CoPset)
   intro Hexec Hwp
   apply pure_soundness (PROP := IProp GF)
   apply step_fupdN_soundness (hlc := hlc) 0 n
-  simp only [Nat.repeat]
+  simp only [step_fupdN]
   iintro %Hinv Hlc
   imod Hwp Hinv $$ Hlc with ⟨%H, %A, %Φ, Hwpi, Hs, Hc⟩
   ihave Hwpi_ad := wpi_adequate H EH Φ t s C m Hexec $$ Hwpi Hs

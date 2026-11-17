@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 module
 
 public section
@@ -6,9 +7,7 @@ namespace Bubble
 
 open Lean Std
 
-/-
-Invariant: between 0 and 1.0
--/
+/-- Invariant: between 0 and 1.0 -/
 structure Percent where
   toFloat : Float
   deriving Inhabited
@@ -21,9 +20,7 @@ protected def ofFloat (f : Float) : Option Percent :=
 instance : Mul Percent where
   mul p q := ⟨p.toFloat * q.toFloat⟩
 
-@[inline]
-def δ : Percent :=
-  ⟨0.00001⟩
+@[inline] def δ : Percent := ⟨0.00001⟩
 
 instance : BEq Percent where
   beq | ⟨p⟩, ⟨q⟩ => if p > q then p - q < δ.toFloat else q - p < δ.toFloat
@@ -34,11 +31,8 @@ instance : Ord Percent where
     else if p.toFloat < q.toFloat then Ordering.lt
     else Ordering.gt
 
-instance : LT Percent :=
-  ltOfOrd
-
-instance : LE Percent :=
-  leOfOrd
+instance : LT Percent := ltOfOrd
+instance : LE Percent := leOfOrd
 
 instance : ToString Percent where
   toString p := toString p.toFloat
@@ -54,7 +48,7 @@ def low     : Percent := ⟨0.25⟩
 def last    : Percent := ⟨0.01⟩
 
 protected def ofNat (n : Nat) : Option Percent :=
-  Percent.ofFloat $ n.toFloat / 100
+  Percent.ofFloat <| n.toFloat / 100
 
 end Percent
 
