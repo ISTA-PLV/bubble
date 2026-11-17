@@ -5,7 +5,7 @@ public meta import Bubble.Rule.Tactic.Basic
 
 public meta section
 
-namespace Bubble.Rule.Tactic.ISplit
+namespace Bubble.Tactic.ISplit
 
 open Lean Meta Qq
 open Iris.ProofMode
@@ -33,4 +33,4 @@ def run (input : RuleInput) : Lean.Elab.Tactic.TacticM RuleOutput := do
       effect := { multiGoalAction? := some .shareContext }
     }
 
-end Bubble.Rule.Tactic.ISplit
+end Bubble.Tactic.ISplit

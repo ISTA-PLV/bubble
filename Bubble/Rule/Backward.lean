@@ -5,9 +5,9 @@ public meta import Bubble.Rule.Tactic.Basic
 
 public meta section
 
-namespace Bubble.Rule.Backward
+namespace Bubble.Backward
 
-open Lean Elab Tactic Meta
+open Lean Elab Lean.Elab.Tactic Meta
 
 initialize registerTraceClass `ibubble.backward
 
@@ -18,8 +18,8 @@ private def openGoals (goals : List MVarId) : MetaM (Array MVarId) := do
 
 def run (input : RuleInput) : TacticM RuleOutput := do
   input.state.restore
-  let before ← Tactic.saveState
-  let some parentIrisGoal ← Tactic.irisGoal? input.goal
+  let before ← Lean.Elab.Tactic.saveState
+  let some parentIrisGoal ← Bubble.Tactic.irisGoal? input.goal
     | return RuleOutput.ofSpecs #[]
   let decl := mkIdent input.matchResult.rule.id.name
   let tactic ← `(tactic| iapply $decl:ident)
@@ -31,7 +31,7 @@ def run (input : RuleInput) : TacticM RuleOutput := do
     let mut childGoals : Array MVarId := #[]
     for goal in generated do
       unless ← goal.isAssignedOrDelayedAssigned do
-        match ← Tactic.irisGoal? goal with
+        match ← Bubble.Tactic.irisGoal? goal with
         | some childIrisGoal =>
           /- Each generated Iris goal should be equipped with the full parent context. -/
           let template := { parentIrisGoal with goal := childIrisGoal.goal }
@@ -64,4 +64,4 @@ def run (input : RuleInput) : TacticM RuleOutput := do
     before.restore
     return RuleOutput.ofSpecs #[]
 
-end Bubble.Rule.Backward
+end Bubble.Backward

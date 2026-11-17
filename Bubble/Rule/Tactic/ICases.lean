@@ -5,9 +5,9 @@ public meta import Bubble.Rule.Tactic.Basic
 
 public meta section
 
-namespace Bubble.Rule.Tactic.ICases
+namespace Bubble.Tactic.ICases
 
-open Lean Elab Tactic Meta Qq
+open Lean Elab Lean.Elab.Tactic Meta Qq
 open Iris.ProofMode
 
 private structure Candidate where
@@ -32,7 +32,7 @@ private def openGoals (goals : List MVarId) : MetaM (Array MVarId) := do
 private def runOrCandidate (input : RuleInput) (pre : IrisGoal)
     (candidate : Candidate) : TacticM (Option RappSpec) := do
   input.state.restore
-  let before ← Tactic.saveState
+  let before ← Lean.Elab.Tactic.saveState
   let hyp := mkIdent candidate.name
   let left := mkIdent <| Name.mkSimple s!"Hcase{input.depth}L"
   let right := mkIdent <| Name.mkSimple s!"Hcase{input.depth}R"
@@ -76,7 +76,7 @@ def runFalse (input : RuleInput) : TacticM RuleOutput := do
   let { prop, .. } := pre
   let mut specs := #[]
   for candidate in candidates pre.hyps do
-    let before ← Tactic.saveState
+    let before ← Lean.Elab.Tactic.saveState
     try
       input.state.restore
       let type ← instantiateMVars candidate.type
@@ -98,4 +98,4 @@ def runFalse (input : RuleInput) : TacticM RuleOutput := do
     catch _ => before.restore
   return .ofSpecs specs
 
-end Bubble.Rule.Tactic.ICases
+end Bubble.Tactic.ICases

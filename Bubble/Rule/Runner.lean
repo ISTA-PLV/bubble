@@ -9,8 +9,7 @@ public meta section
 
 namespace Bubble
 
-open Lean Meta Elab Tactic
-open Iris.ProofMode
+open Lean Meta Elab Tactic Iris.ProofMode
 
 structure RuleInput where
   goal : MVarId

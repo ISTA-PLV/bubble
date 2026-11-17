@@ -5,9 +5,9 @@ public meta import Bubble.Rule.Tactic.Basic
 
 public meta section
 
-namespace Bubble.Rule.Tactic.IMod
+namespace Bubble.Tactic.IMod
 
-open Lean Elab Tactic Meta
+open Lean Elab Lean.Elab.Tactic Meta
 open Iris.ProofMode
 
 private structure Candidate where
@@ -70,4 +70,4 @@ def run (input : RuleInput) : TacticM RuleOutput := do
       trace[ibubble.rule] "imod {candidate.name} failed: {exception.toMessageData}"
   return .ofSpecs specs
 
-end Bubble.Rule.Tactic.IMod
+end Bubble.Tactic.IMod

@@ -5,9 +5,9 @@ public meta import Bubble.Rule.Tactic.Basic
 
 public meta section
 
-namespace Bubble.Rule.Tactic.ILeftRight
+namespace Bubble.Tactic.ILeftRight
 
-open Lean Elab Tactic Meta
+open Lean Elab Lean.Elab.Tactic Meta
 
 inductive Side where
   | left
@@ -15,7 +15,7 @@ inductive Side where
 
 private def runSide (side : Side) (input : RuleInput) : TacticM RuleOutput := do
   input.state.restore
-  let before ← Tactic.saveState
+  let before ← Lean.Elab.Tactic.saveState
   try
     let tactic ← match side with
       | .left => `(tactic| ileft)
@@ -40,4 +40,4 @@ private def runSide (side : Side) (input : RuleInput) : TacticM RuleOutput := do
 def runLeft : RuleRunner := runSide .left
 def runRight : RuleRunner := runSide .right
 
-end Bubble.Rule.Tactic.ILeftRight
+end Bubble.Tactic.ILeftRight

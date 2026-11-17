@@ -5,7 +5,7 @@ public meta import Bubble.Rule.Tactic.Basic
 
 public meta section
 
-namespace Bubble.Rule.Tactic.ApplyHyps
+namespace Bubble.Tactic.ApplyHyps
 
 open Lean Meta Qq
 open Iris.BI
@@ -211,4 +211,4 @@ def run (input : RuleInput) : Lean.Elab.Tactic.TacticM RuleOutput := do
       }
     }
 
-end Bubble.Rule.Tactic.ApplyHyps
+end Bubble.Tactic.ApplyHyps

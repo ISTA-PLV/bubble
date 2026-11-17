@@ -5,7 +5,7 @@ public meta import Lean.Util.Profile
 public meta import Bubble.Index.Query
 public meta import Bubble.Replay.Main
 public meta import Bubble.Rule.Index
-public meta import Bubble.Rule.Tactic.Main
+public meta import Bubble.Rule.Main
 public meta import Bubble.Search.Commit
 public meta import Bubble.Search.Propagation
 
@@ -13,7 +13,7 @@ public meta section
 
 namespace Bubble.Search
 
-open Lean Meta Std Elab Tactic
+open Lean Meta Std Elab Lean.Elab.Tactic
 
 initialize registerTraceClass `ibubble.search
 
