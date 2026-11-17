@@ -1,8 +1,8 @@
 -- SPDX-License-Identifier: Apache-2.0
 module
 
-public meta import Lean.Meta.Basic
 public import Iris.ProofMode.Expr
+public meta import Lean.Meta.Basic
 public meta import Bubble.Rule.Types
 
 public meta section
