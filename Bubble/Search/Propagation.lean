@@ -121,7 +121,7 @@ private partial def passThroughRapp (rappRef : RappRef) (rising : RisingBubble) 
       return
   let consumed ← propagateFootprint rising.consumed
     rapp.generatedSpatialHyps rapp.consumedSpatialHyps
-  -- Rapp's nodeId needed to be recorded for replay procedure
+  -- Rapp's nodeId needed to be recorded for proof reconstruction
   passThroughGoal rapp.parent {
     rising with forward := #[rapp.id] ++ rising.forward, consumed, metaInfo
   }

@@ -7,7 +7,7 @@ public meta section
 
 namespace Iris.ProofMode.Aesop
 
-open Lean Meta Qq Std
+open Lean Meta Qq
 
 /- Treat typeclass-search exceptions as failed speculative probes and restore the metavariable state. -/
 def trySynthInstanceProbeQ {u : Level} (α : Q(Sort u)) :

@@ -3,7 +3,7 @@ module
 
 public meta import Lean.Util.Profile
 public meta import Bubble.Index.Query
-public meta import Bubble.Replay.Main
+public meta import Bubble.Reconstruction.Main
 public meta import Bubble.Rule.Index
 public meta import Bubble.Rule.Main
 public meta import Bubble.Search.Commit
@@ -147,7 +147,7 @@ private partial def searchLoop : SearchM Q (Array MVarId) := do
   checkSystem "ibubble"
   if let some rootBubble ← TreeM.getResult? then
     let config ← SearchM.getConfig
-    return ← Replay.replayProof config rootBubble
+    return ← Reconstruction.reconstructProof config rootBubble
   if ← expandNextGoal then
     SearchM.incrementIteration
     searchLoop

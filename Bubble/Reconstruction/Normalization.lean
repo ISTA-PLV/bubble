@@ -1,17 +1,17 @@
 -- SPDX-License-Identifier: Apache-2.0
 module
 
-public meta import Bubble.Replay.Basic
-public meta import Bubble.Replay.ReplayM
+public meta import Bubble.Reconstruction.Basic
+public meta import Bubble.Reconstruction.ReconM
 public meta import Bubble.Search.Normalization
 
 public meta section
 
-namespace Bubble.Replay
+namespace Bubble.Reconstruction
 
 open Lean Lean.Meta Lean.Elab.Tactic
 
-/-- Run normalization and record its successful tactic steps for replay when requested. -/
+/-- Run normalization and record its successful tactic steps for reconstruction when requested. -/
 def normalizeGoalMVar (goal : MVarId) (depth maxIterations : Nat)
     (enableSimp : Bool) (goalMVars : Std.HashSet MVarId)
     (recordScript : Bool) : TacticM (Search.NormSeqResult × UScript × Array MVarId) := do
@@ -27,28 +27,28 @@ def normalizeGoalMVar (goal : MVarId) (depth maxIterations : Nat)
     enableSimp goalMVars observer?
   return (result, ← scriptRef.get, remaining)
 
-/-- Replay normalization on the current goal and record its successful steps. -/
+/-- Normalize the current goal and record its successful reconstruction steps. -/
 def normalize (focus : MVarId) (goal : Goal) :
-    ReplayM (Search.NormSeqResult × Array MVarId) := do
-  let config ← ReplayM.getConfig
+    ReconM (Search.NormSeqResult × Array MVarId) := do
+  let config ← ReconM.getConfig
   let (result, script, remaining) ←
     normalizeGoalMVar focus goal.depth config.maxNormIterations
       config.enableSimp? goal.unassignedMvars config.generateScript?
-  ReplayM.appendScript script
-  return (result, ← ReplayM.openGoals remaining)
+  ReconM.appendScript script
+  return (result, ← ReconM.openGoals remaining)
 
-/-- Normalize a goal before replaying its selected rule application. -/
+/-- Normalize a goal before reconstructing its selected rule application. -/
 def normalizeForRuleApplication (focus : MVarId) (goal : Goal) :
-    ReplayM (MVarId × Array MVarId) := do
+    ReconM (MVarId × Array MVarId) := do
   if let .normal postGoal _ _ _ := goal.normalizationState then
     if postGoal == goal.preNormGoal then
       return (focus, #[])
   let (result, remaining) ← normalize focus goal
   let normalizedFocus ← match result with
     | .proved => throwError
-        "ibubble: normalization unexpectedly closed a rule goal during replay"
+        "ibubble: normalization unexpectedly closed a rule goal during reconstruction"
     | .changed goal => pure goal
     | .unchanged => pure focus
   return (normalizedFocus, remaining)
 
-end Bubble.Replay
+end Bubble.Reconstruction
