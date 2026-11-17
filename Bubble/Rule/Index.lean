@@ -7,13 +7,12 @@ public meta import Bubble.Search.Configure
 
 public meta section
 
-namespace Bubble.Rule
+namespace Bubble
 
-open Lean Meta
-open Iris.BI
+open Lean Meta Iris.BI
 
-private def builtinRule (name : Name)
-    (descr : TacticDescr) (probability : Percent) : Rule where
+/-- Built-in tactic rules. -/
+private def builtinRule (name : Name) (descr : TacticDescr) (probability : Percent) : Rule where
   id := { name, builder := .tactic descr, scope := .global }
   indexingMode := .unindexed
   successProb := probability
@@ -54,7 +53,7 @@ def imodRule : Rule :=
 def isplitRule : Rule :=
   builtinRule `isplit .isplit .almost
 
-def commonIndex : Index :=
+def tacticsIndex : Index :=
   ({} : Index)
     |>.add identityRule identityRule.indexingMode
     |>.add applyHypsRule applyHypsRule.indexingMode
@@ -123,8 +122,9 @@ def localTheoremIndex (rules : Array LocalTheoremRule) :
         index := index.add rule rule.indexingMode
   return index
 
+/-- Return back all potential rules' set in `Bubble`. -/
 def buildIndex (config : SearchConfig) : MetaM Index := do
-  return commonIndex.merge (← backwardIndex config.localTheoremRules)
+  return tacticsIndex.merge (← backwardIndex config.localTheoremRules)
     |>.merge (← localTheoremIndex config.localTheoremRules)
 
-end Bubble.Rule
+end Bubble
