@@ -49,8 +49,6 @@ jobs:
       - name: Update, build, test, and lint
         run: |
           lake --keep-toolchain update
-          lake --keep-toolchain -d tests update
           lake build
-          lake lint
-          lake -d tests test
-          lake -d tests lint BubbleTest
+          lake test
+          lake lint Bubble BubbleTest

@@ -20,10 +20,7 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           build: "true"
-          test: "false"
+          test: "true"
           lint: "true"
+          lint-args: "Bubble BubbleTest"
           use-mathlib-cache: "false"
-      - name: Test and lint the test package
-        run: |
-          lake -d tests test
-          lake -d tests lint BubbleTest
