@@ -13,7 +13,7 @@ Bubble provides the `ibubble` proof-search tactic for Iris Lean.
 
 The Lean version is fixed in `lean-toolchain`. Lake downloads the project
 dependencies when needed. Downstream projects can depend on this package and
-`import Bubble`; they do not download Coinductive or build Bubble's test suite.
+`import Bubble`; they do not build Bubble's test suite by default.
 
 ## Build, test, and lint
 
@@ -21,21 +21,21 @@ From this directory, run:
 
 ```sh
 lake build
+lake test
 lake lint
 ```
 
-These commands build and lint the Bubble library. The tests have a separate Lake
-package in `tests/`, with their own test-only Coinductive and Aesop dependencies. Their Lean
-source files remain in `BubbleTest.lean` and `BubbleTest/`.
+`Bubble` and `BubbleTest` are two libraries in one Lake package. `lake build`
+builds only `Bubble`; `lake test` builds the complete test suite. Their sources
+remain in `Bubble/` and `BubbleTest/`, and the editor uses the root `lakefile.toml`
+for both. Lake fetches the declared benchmark dependencies, including Coinductive,
+Aesop, and Wander.
 
-To build and lint the complete test suite from the repository root, run:
+To lint both libraries, as CI does, run:
 
 ```sh
-lake -d tests test
-lake -d tests lint BubbleTest
+lake lint Bubble BubbleTest
 ```
-
-CI builds, tests, and lints both packages.
 
 Linting uses Lean's built-in checks, including unused variables and section
 parameters, deprecated declarations, unreachable tactics, and unnecessary `<;>`
@@ -94,7 +94,7 @@ From this directory, run:
 
 ```sh
 python3 -m pip install matplotlib numpy
-lake -d tests build BubbleTest.Robustness
+lake build BubbleTest.Robustness
 bash BubbleTest/Robustness/run_benchmark.sh
 ```
 
