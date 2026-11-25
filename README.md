@@ -91,4 +91,5 @@ ibubble without [foo]
 ```
 
 Copyright (c) 2026 Institute of Science and Technology Austria (ISTA).
+
 Licensed under the Apache License, Version 2.0.
