@@ -31,24 +31,30 @@ jobs:
           MODE: ${{ matrix.mode }}
         run: |
           iris_rev=$(git ls-remote https://github.com/leanprover-community/iris-lean.git HEAD | cut -f1)
-          sed -i "/^name = \"iris\"$/,/^rev = /s/^rev = .*/rev = \"$iris_rev\"/" lakefile.toml
+          sed -i "/^name = \"iris\"$/,/^rev = /s/^rev = .*/rev = \"$iris_rev\"/" Bubble/lakefile.toml
           if [[ "$MODE" == "lean" ]]; then
             lean_tag=$(gh api repos/leanprover/lean4/releases/latest --jq .tag_name)
-            printf 'leanprover/lean4:%s\n' "$lean_tag" > lean-toolchain
+            printf 'leanprover/lean4:%s\n' "$lean_tag" > Bubble/lean-toolchain
           else
-            curl -fsSL "https://raw.githubusercontent.com/leanprover-community/iris-lean/$iris_rev/Iris/lean-toolchain" > lean-toolchain
+            curl -fsSL "https://raw.githubusercontent.com/leanprover-community/iris-lean/$iris_rev/Iris/lean-toolchain" > Bubble/lean-toolchain
           fi
+          cp Bubble/lean-toolchain BubbleTest/lean-toolchain
           echo "Iris commit: $iris_rev"
-          cat lean-toolchain
+          cat Bubble/lean-toolchain
       - name: Install the selected Lean toolchain
         uses: leanprover/lean-action@v1
         with:
+          lake-package-directory: Bubble
           auto-config: "false"
           use-github-cache: "false"
           use-mathlib-cache: "false"
       - name: Update, build, test, and lint
         run: |
+          cd Bubble
           lake --keep-toolchain update
           lake build
+          lake lint
+          cd ../BubbleTest
+          lake --keep-toolchain update
           lake test
-          lake lint Bubble BubbleTest
+          lake lint

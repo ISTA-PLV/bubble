@@ -1,0 +1,26 @@
+name = "bubbletest"
+version = "0.1.0"
+license = "Apache-2.0"
+defaultTargets = ["BubbleTest"]
+testDriver = "BubbleTest"
+builtinLint = true
+
+[leanOptions]
+linter.unusedVariables = true
+linter.unusedSectionVars = true
+linter.deprecated = true
+linter.extra.unreachableTactic = true
+linter.extra.unnecessarySeqFocus = true
+
+[[require]]
+name = "bubble"
+path = "../Bubble"
+
+[[require]]
+name = "Coinductive"
+git = "https://github.com/ISTA-PLV/coinductive.git"
+rev = "617e8cb27b69a14e3d3217c850d47fde8c37b5f1"
+
+[[lean_lib]]
+name = "BubbleTest"
+globs = ["BubbleTest", "BubbleTest.+"]

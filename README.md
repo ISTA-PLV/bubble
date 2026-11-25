@@ -7,24 +7,37 @@ Bubble provides the `ibubble` proof-search tactic for Iris Lean.
 - [Elan](https://github.com/leanprover/elan), which installs the pinned Lean
   toolchain automatically
 
-The Lean version is fixed in `lean-toolchain`. Lake downloads the project
-dependencies when needed. Downstream projects can depend on this package and
-`import Bubble`; they do not build Bubble's test suite by default.
+The repository contains two Lake packages, laid out like Iris Lean:
+
+- `Bubble/`: the `bubble` library, which depends only on Iris.
+- `BubbleTest/`: the test suite, which depends on `bubble` (by path) and on
+  Coinductive.
+
+Each package has its own `lakefile.toml`, `lake-manifest.json`, and
+`lean-toolchain`. Lake downloads the dependencies when needed. Downstream
+projects depend on the `Bubble` subdirectory and `import Bubble`; they do not
+download Coinductive or build the tests:
+
+```toml
+[[require]]
+name = "bubble"
+git = "<this repository>"
+rev = "main"
+subDir = "Bubble"
+```
 
 ## Build, test, and lint
 
-From this directory, run:
+From the repository root, run:
 
 ```sh
-lake build
-lake test
-lake lint Bubble BubbleTest
+(cd Bubble && lake build && lake lint)
+(cd BubbleTest && lake test && lake lint)
 ```
 
-`Bubble` and `BubbleTest` are two libraries in one Lake package. `lake build`
-builds only `Bubble`; `lake test` builds the complete test suite. The editor uses
-the root `lakefile.toml` for both. Lake fetches the declared dependencies,
-including Coinductive.
+The test package builds `bubble` from `../Bubble`, so `lake test` always uses
+the current library sources. In the editor, each file uses the package of its
+nearest `lakefile.toml`.
 
 Linting uses Lean's built-in checks, including unused variables and section
 parameters, deprecated declarations, unreachable tactics, and unnecessary `<;>`
@@ -32,7 +45,8 @@ combinators. The command fails when it finds lint warnings.
 
 ## Daily upstream compatibility
 
-Every day at 06:23 UTC, CI builds, tests, and lints two upstream configurations:
+Every day at 06:23 UTC, CI builds, tests, and lints both packages against two
+upstream configurations:
 
 - The latest commit on Iris Lean's default branch, using the Lean toolchain that
   commit declares.
