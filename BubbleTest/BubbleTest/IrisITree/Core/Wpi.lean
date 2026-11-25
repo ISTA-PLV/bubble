@@ -120,6 +120,8 @@ section instances
 
 open ProofMode
 
+attribute [local ibubble 10%] fupd_wpi_empty
+
 instance elimModal_fupd_wpi p E1 E2 E3 (P : PROP) :
     ElimModal True p io false
       iprop(|={E1,E2}=> P) P
@@ -141,7 +143,7 @@ instance elimModal_wpi_wpi p H1 H2 (t1 : ITree E1 R1) (t2 : ITree E2 R2) Ms Me1 
     cases p <;> simp
     all_goals
       iintro ⟨HΦ, Hwand⟩; ihave HΦ := fupd_wpi_empty $$ HΦ
-      ibubble with [fupd_wpi_empty 75%]
+      ibubble
 
 instance elimModal_wpi_fupd p E1 E2 E3 (P : PROP) :
     ElimModal True p io false
@@ -254,7 +256,8 @@ theorem wpi_ind :
   let G' := fun (Ms : CoPset) t Φ => iprop(<affine> ⌜Ms = ∅⌝ -∗ G t Φ)
   have : ∀ Ms t, OFE.NonExpansive (G' Ms t) := fun _ _ =>
     ⟨fun {_ _ _} HΦ => wand_ne.ne .rfl (OFE.NonExpansive.ne HΦ)⟩
-  iapply wpi_ind_mask G' $$ [] Hwp <;> ibubble pureBy simp
+  iapply wpi_ind_mask G' $$ [] Hwp <;>
+    ibubble pureBy simp
 
 theorem wpi_iter :
     □ (∀ t Φ, wpiF H (fun _ => G) ∅ Me t Φ -∗ G t Φ) ⊢
@@ -292,7 +295,8 @@ theorem wpi_wand (Φ Ψ : R → PROP) :
   have : ∀ t, OFE.NonExpansive (G t) := fun t => ⟨
     fun _ _ _ Hx => forall_ne fun Ψ => wand_ne.ne
     (forall_ne fun r => wand_ne.ne (Hx r) .rfl) .rfl⟩
-  iapply wpi_iter' G $$ [] [] [] Hwp Hwand <;> ibubble
+  iapply wpi_iter' G $$ [] [] [] Hwp Hwand <;>
+    ibubble
 
 @[local ibubble 25%]
 theorem wpi_fupd_empty_2 (Φ : R → PROP) :
@@ -304,7 +308,8 @@ theorem wpi_fupd_empty_2 (Φ : R → PROP) :
   have : ∀ t, OFE.NonExpansive (G t) := fun t => ⟨
     fun _ _ _ HΨ => forall_ne fun Φ => wand_ne.ne
     (forall_ne fun r => wand_ne.ne (HΨ r) .rfl) .rfl⟩
-  iintro >Hwp; iapply wpi_iter' G $$ [] [] [] Hwp <;> ibubble
+  iintro >Hwp; iapply wpi_iter' G $$ [] [] [] Hwp <;>
+    ibubble
 
 @[local ibubble 25%]
 theorem wpi_fupd_empty_1 (Φ : R → PROP) :
@@ -355,15 +360,15 @@ section wp_itree_invariant
 
 variable {E R} {Ms Me : CoPset} {H : IHandler PROP E}
 
+attribute [local ibubble 25%] wpi_wand wpi_fupd_empty_2 fupd_mask_subseteq
+
 /-- Re-mask a `WPi`: change the start mask from `Ms` to `Ms'` up front, and the end mask from `Me'` back to `Me` in the postcondition. -/
 theorem fupd_wpi_fupd Ms' Me' t (Φ : R → PROP) :
     (|={Ms, Ms'}=> WPi t @> H; Ms', Me' {{ v, |={Me', Me}=> Φ v}}) -∗
     WPi t @> H; Ms, Me {{ Φ }} := by
   iintro Hwp; imod Hwp; imod Hwp
   ihave Hwp := wpi_fupd_empty $$ Hwp
-  iapply wpi_fupd_empty
-  iapply wpi_wand $$ Hwp
-  iintro %_ > $
+  ibubble
 
 theorem wpi_atomic t (Φ : R → PROP) :
     (|={Ms, ∅}=> WPi t @> H; ∅ {{ v, |={∅, Me}=> Φ v}}) ⊣⊢
@@ -376,9 +381,7 @@ theorem wpi_atomic t (Φ : R → PROP) :
 theorem wpi_atomic_false (t : ITree E R) :
     (|={Ms, ∅}=> WPi t @> H; ∅ {{ _v, False}}) -∗
     WPi t @> H; Ms, Me {{ _v, False}} := by
-  iintro Hwp; iapply wpi_atomic
-  imod Hwp; imodintro; iapply wpi_wand $$ Hwp
-  iintro %_ ⟨⟩
+  ibubble
 
 theorem wpi_mask_mono_start {Ms'} [BIAffine PROP] t (Φ : R → PROP) :
     Ms ⊆ Ms' →
@@ -431,10 +434,7 @@ instance elimAcc_wpi t (Φ : R → PROP) {X} M (α β : X → PROP) (γ : X → 
 
 instance isExcept0_wpi t (Φ : R → PROP) : IsExcept0 (WPi t @> H; Ms, Me {{ Φ }}) where
   is_except0 := by
-    iintro Hwp
-    iapply fupd_wpi_empty
-    imod Hwp; imod Hwp
-    imodintro; iframe
+    ibubble with [fupd_wpi_empty]
 
 end instances
 
