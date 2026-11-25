@@ -19,7 +19,7 @@ path = "../Bubble"
 [[require]]
 name = "Coinductive"
 git = "https://github.com/ISTA-PLV/coinductive.git"
-rev = "617e8cb27b69a14e3d3217c850d47fde8c37b5f1"
+rev = "e9b076be95c23b03577cd3041ce55f20df214a9b"
 
 [[lean_lib]]
 name = "BubbleTest"

@@ -7,18 +7,18 @@ import Iris.ProofMode
 public import ITree.Effects.Fail
 public import BubbleTest.IrisITree.Core.Wpi
 
-@[expose] public section
+public section
 
-namespace IrisITree.Effects
+namespace IrisITree
 
-open Iris Iris.BI ITree IrisITree.Core ITree.Effects
+open Iris Iris.BI ITree ITree.Effects
 
 section handler
 
 variable {PROP : Type _} [BI PROP]
 
 def failH : IHandler PROP failE where
-  ihandle := λ _ _ _ => iprop(False)
+  ihandle := fun _ _ _ => iprop(False)
   ihandle_mono := by
     ibubble
 
@@ -34,7 +34,7 @@ variable {PROP : Type _} [BI PROP] [BIFUpdate PROP] {E : Effect}
   {H : IHandler PROP E} [sub : failE -< E] [Hin : InH failH H]
 
 theorem wpi_fail {R} (M : CoPset) (Φ : R → PROP) (s : String) :
-    (WPi fail s @> H; M {{ Φ }}) ⊢ |={M}=> iprop(False) := by
+    WPi fail s @> H; M {{ Φ }} ={M}=∗ False := by
   iintro Hwp; simp [fail, Effect.trigger]
   let e := @Subeffect.map failE E sub ({ down := s } : failE.I)
   ihave >Hwp := wpi_vis $$ Hwp
@@ -68,3 +68,5 @@ instance failEH_adequate {PROP : Type _} [BI PROP] [BIFUpdate PROP] :
     ibubble
 
 end exec
+
+end IrisITree

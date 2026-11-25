@@ -4,14 +4,14 @@ module
 import Bubble
 
 import Iris.ProofMode
-public import BubbleTest.IrisITree.Core.Wpi
 public import ITree.Effects.Conc
+public import BubbleTest.IrisITree.Core.Wpi
 
-@[expose] public section
+public section
 
-namespace IrisITree.Effects
+namespace IrisITree
 
-open Iris Iris.BI ITree ITree.Effects IrisITree.Core
+open Iris Iris.BI ITree ITree.Effects
 
 section handler
 
@@ -44,9 +44,9 @@ theorem wpi_kill M (Φ : PUnit → PROP) :
   ibubble pureBy simp
 
 @[ibubble 75%]
-theorem wpi_fork M (Φ : PUnit → PROP) :
+theorem wpi_fork t M (Φ : PUnit → PROP) :
     Φ ⟨⟩ -∗
-    WPi t @> H; ⊤ {{ _v, iprop(True) }} -∗
+    WPi t @> H; ⊤ {{ _v, True }} -∗
     WPi fork t @> H; M {{Φ}} := by
   unfold fork
   iintro HΦ Ht; iapply wpi_trigger_bind; simp [concH]
@@ -56,7 +56,7 @@ theorem wpi_fork M (Φ : PUnit → PROP) :
 @[ibubble 75%]
 theorem wpi_yield (Φ : PUnit → PROP) :
     Φ ⟨⟩ -∗
-    WPi yield @> H; ⊤ {{Φ}} := by
+    WPi yield @> H; ⊤ {{ Φ }} := by
   unfold yield
   ibubble pureBy simp
 
@@ -64,7 +64,7 @@ end wpi_rules
 
 section exec
 
-open ITree.Exec IrisITree.Core
+open ITree.Exec
 
 variable {PROP : Type _} [BI PROP] [BIFUpdate PROP] [BIAffine PROP]
 
@@ -91,27 +91,25 @@ private theorem filterMap_set_perm {T U : Type _} (f : T → U)
         · exact (List.Perm.swap _ _ _).trans (List.Perm.cons (f y) hp)
         · exact (List.Perm.swap _ _ _).trans ((List.Perm.cons (f y) hp).trans (List.Perm.swap _ _ _))
 
-instance coneEH_adequate {GE GR} :
+instance concEH_adequate {GE GR} :
     EHandlerAdequate (PROP:=PROP) concH (concEH (GE:=GE) (GR:=GR)) where
-  inv s Ms :=
-    iprop(<affine> ⌜Ms = s.pool.filterMap λ t =>
-      (λ t P => iprop(|={⊤, ∅}=> P t)) <$> t⌝)
+  inv s Ms := iprop(<affine> ⌜Ms = s.pool.filterMap fun t =>
+      (fun t P => iprop(|={⊤, ∅}=> P t)) <$> t⌝)
   adequate := by
     intro G i s Ms C k Hhandle
     simp [concH, concEH] at Hhandle ⊢
     cases i <;> simp at Hhandle ⊢
     · -- Fork case
       iintro ⟨_, _⟩ %h !>
-      iexists _, _, λ P => P (k .parent),
-        Ms ++ [(λ P => iprop(|={⊤, ∅}=> P (k .child)))],
-        [λ P => P (k .parent), λ P => iprop(|={⊤, ∅}=> P (k .child))]
+      iexists _, _, fun P => P (k .parent), Ms ++ [(fun P => iprop(|={⊤, ∅}=> P (k .child)))],
+        [fun P => P (k .parent), fun P => iprop(|={⊤, ∅}=> P (k .child))]
       ibubble pureStop <;> try simp [*]
       · change _ = List.filterMap _ (s.add (k .child)).pool
         simp [ConcState.add]
       · exact Hhandle
     · -- Kill case
       iintro Ht %h; rcases Hhandle with ⟨i, t', hi, Hget, HC⟩; imodintro
-      let f := λ t (P: (ITree GE GR → PROP)) => iprop(|={⊤, ∅}=> P t)
+      let f := fun t (P: (ITree GE GR → PROP)) => iprop(|={⊤, ∅}=> P t)
       iexists t', ConcState.yield s.pool i hi, f t',
         (ConcState.yield s.pool i hi).pool.filterMap (Option.map f), []
       ibubble pureStop <;> try simp [*]
@@ -120,7 +118,7 @@ instance coneEH_adequate {GE GR} :
     · -- Yield case
       iintro >Ht %h; rcases Hhandle with ⟨i, t', hi, Hget, HC⟩
       iapply fupd_mask_intro (by simp); iintro Hemp
-      let f := λ t (P : ITree GE GR → PROP) => iprop(|={⊤, ∅}=> P t)
+      let f := fun t (P : ITree GE GR → PROP) => iprop(|={⊤, ∅}=> P t)
       let tp' := s.pool.set s.curr (some (k ⟨⟩))
       have hi' : i < tp'.length := by simpa [tp'] using hi
       iexists t', ConcState.yield tp' i hi', f t',
@@ -134,3 +132,5 @@ instance coneEH_adequate {GE GR} :
       · rfl
 
 end exec
+
+end IrisITree

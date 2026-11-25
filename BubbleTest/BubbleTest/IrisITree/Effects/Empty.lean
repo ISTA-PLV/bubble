@@ -4,12 +4,12 @@ module
 import Bubble
 
 import Iris.ProofMode
-public import BubbleTest.IrisITree.Core.Handler
-public import ITree
+public import ITree.Effects.Empty
+public import BubbleTest.IrisITree.Core.Wpi
 
-@[expose] public section
+public section
 
-namespace IrisITree.Effects
+namespace IrisITree
 
 open Iris BI ITree Effects
 
@@ -29,3 +29,5 @@ end handler
 
 def insert_emptyE {E R} (t : ITree E R) : ITree (E ⊕ₑ emptyE) R :=
   ITree.interp (fun i => E.trigger i) t
+
+end IrisITree

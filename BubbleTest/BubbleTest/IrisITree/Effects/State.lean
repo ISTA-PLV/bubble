@@ -4,14 +4,14 @@ module
 import Bubble
 
 import Iris.ProofMode
-public import BubbleTest.IrisITree.Core.Wpi
 public import ITree.Effects.State
+public import BubbleTest.IrisITree.Core.Wpi
 
-@[expose] public section
+public section
 
-namespace IrisITree.Effects
+namespace IrisITree
 
-open Iris Iris.BI ITree ITree.Effects IrisITree.Core
+open Iris Iris.BI ITree ITree.Effects
 
 section handler
 
@@ -55,7 +55,6 @@ theorem wpi_get Ms Me (Φ : S → PROP) :
     (∀ s, stateInterp s ={Ms, Me}=∗ stateInterp s ∗ Φ s) -∗
     WPi get @> H; Ms, Me {{Φ}} := wpi_stateE_get _ _ _ _
 
--- Allow a mask-changing fancy update from `Ms` to `Me` while handling `get`.
 theorem wpi_stateE_set Ms Me s' (Φ : PUnit → PROP) :
     (∀ s, stateInterp s ={Ms, Me}=∗ stateInterp s' ∗ Φ ⟨⟩) -∗
     WPi StateE.set s' @> H; Ms, Me {{Φ}} := by
@@ -72,7 +71,7 @@ end wpi_rules
 
 section exec
 
-open ITree.Exec IrisITree.Core
+open ITree.Exec
 
 variable {PROP : Type _} [BI PROP] [BIFUpdate PROP]
   {S : Type _} (stateInterp : S → PROP)
@@ -86,3 +85,5 @@ instance stateEH_adequate :
     ibubble pureBy simp
 
 end exec
+
+end IrisITree

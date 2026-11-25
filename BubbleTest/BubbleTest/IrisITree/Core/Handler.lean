@@ -4,39 +4,42 @@ module
 import Bubble
 
 public import Iris.BI
-import Iris.ProofMode
+public import Iris.ProofMode
 public import ITree.Definition
 public import ITree.Exec
 
-@[expose] public section
+public section
+
+local stepindex Nat
+
+namespace IrisITree
 
 open Iris BI ITree
 
 /--
-  An [IHandler] is the user-specified recipe used to define a custom
-  weakest precondition [WPi]. It specifies how to interpret an effect
-  logically, given weakest preconditions for continuations of the itree.
+  An `IHandler` is the user-specified recipe used to define a custom weakest precondition `WPi`.
+  It specifies how to interpret an effect logically, given weakest preconditions for
+  continuations of the itree.
 -/
 structure IHandler (PROP : Type u) [BI PROP] (E : Effect.{v}) where
   ihandle :
     (i : E.I) →
-    -- Continuation conditions [λ a, ▷ WPi k a @ H; ∅ {{ Φ }}]
+    -- Main continuation with the postcondition, must be used at most once
     (E.O i → PROP) →
-    -- Conditions for spawning threads [λ a, ▷ WPi k a @ H; ⊤ {{ False }}]
+    -- Continuation for without postcondition, can be used multiple times (e.g., for spawning threads)
     (E.O i → PROP) →
-    -- Condition [WPi (Vis i k) @ H; ∅ {{ Φ }}]
     PROP
 
-  ihandle_mono :
-    ∀ (i : E.I) (Φ Φ' s s' : E.O i → PROP),
-      (∀ a, Φ a -∗ Φ' a) -∗
-      □ (∀ t, s t -∗ s' t) -∗
-      ihandle i Φ s -∗ ihandle i Φ' s'
+  ihandle_mono : ∀ (i : E.I) (Φ Φ' s s' : E.O i → PROP),
+    (∀ a, Φ a -∗ Φ' a) -∗
+    □ (∀ t, s t -∗ s' t) -∗
+    ihandle i Φ s -∗ ihandle i Φ' s'
 
 attribute [local ibubble 10%] IHandler.ihandle_mono
 
 instance {PROP E} [BI PROP] (H : IHandler PROP E) (i : E.I) :
     OFE.NonExpansive₂ (H.ihandle i) := by
+  -- TODO automate this
   constructor
   intro n Φ₁ Φ₂ HΦ s₁ s₂ Hs
   have Hmon (Φ s : E.O i → PROP) : H.ihandle i Φ s =
@@ -45,17 +48,17 @@ instance {PROP E} [BI PROP] (H : IHandler PROP E) (i : E.I) :
     apply BIBase.BiEntails.to_eq
     ibubble
   apply (Hmon Φ₁ s₁).dist.trans
-  apply ((exists_ne λ Φ' => ?_)).trans (Hmon Φ₂ s₂).dist.symm
-  refine exists_ne λ s' => ?_
-  refine sep_ne.ne ?_ <| sep_ne.ne ?_ .rfl
-  · exact forall_ne λ a => wand_ne.ne .rfl (HΦ a)
-  · exact intuitionistically_ne.ne $ forall_ne λ a => wand_ne.ne .rfl (Hs a)
+  apply ((exists_ne fun Φ' => ?_)).trans (Hmon Φ₂ s₂).dist.symm
+  refine exists_ne fun s' => sep_ne.ne ?_ <| sep_ne.ne ?_ .rfl
+  · exact forall_ne fun a => wand_ne.ne .rfl (HΦ a)
+  · exact intuitionistically_ne.ne <| forall_ne fun a => wand_ne.ne .rfl (Hs a)
 
 section handler_sumH
 
 variable {E₁ E₂} {PROP : Type _} [BI PROP] (H₁ : IHandler PROP E₁) (H₂ : IHandler PROP E₂)
 
 /-- An [IHandler] for sum events [E₁ ⊕ₑ E₂] delegating to respective [IHandler]s. -/
+@[expose]
 def sumH : IHandler PROP (E₁ ⊕ₑ E₂) where
   ihandle := by
     intro e Φ s
@@ -79,7 +82,7 @@ section handler_InH
 
 variable {PROP : Type _} [BI PROP]
 
-/-- `InH H1 H2` means that, on events [E1], [H1] is equivalent to [H2] -/
+/-- `InH H1 H2` means that `H1` is equivalent to `H2` on events `E1`. -/
 class InH {E₁ E₂} [Hsub : E₁ -< E₂]
     (H1 : outParam (IHandler PROP E₁)) (H2 : IHandler PROP E₂) where
   is_inH : ∀ (i₁ : E₁.I) (Φ₁ s₁ : E₁.O i₁ → PROP),
@@ -96,27 +99,26 @@ instance {PROP E} [BI PROP] (H : IHandler PROP E) : InH H H := by
 
 instance {PROP E₁ E₂ E₃} [BI PROP] [f : E₁ -< E₂]
     (H1 : IHandler PROP E₁) (H2 : IHandler PROP E₂) (H3 : IHandler PROP E₃)
-    [Hin : InH H1 H2]:
-   InH H1 (H2 ⊕ₕ H3) := by
-    constructor
-    intro i Φ s
-    exact Hin.is_inH i Φ s
+    [Hin : InH H1 H2] : InH H1 (H2 ⊕ₕ H3) := by
+  constructor
+  intro i Φ s
+  exact Hin.is_inH i Φ s
 
 instance {PROP E₁ E₂ E₃} [BI PROP] [f : E₁ -< E₃]
-    (H1 : IHandler PROP E₁) (H2 : IHandler PROP E₂) (H3 : IHandler PROP E₃)  [Hin : InH H1 H3]:
-   InH H1 (H2 ⊕ₕ H3) := by
-    constructor
-    intro i Φ s
-    exact Hin.is_inH i Φ s
+    (H1 : IHandler PROP E₁) (H2 : IHandler PROP E₂) (H3 : IHandler PROP E₃)
+    [Hin : InH H1 H3] : InH H1 (H2 ⊕ₕ H3) := by
+  constructor
+  intro i Φ s
+  exact Hin.is_inH i Φ s
 
 end handler_InH
 
 section handler_WandH
 
-/-- `[WandH H1 H2]` means that `H1` implies `H2` -/
+/-- `WandH H1 H2` means that `H1` implies `H2` -/
 class WandH {PROP E} [BI PROP] (H1 : IHandler PROP E) (H2 : IHandler PROP E) where
   is_wandH : ∀ (i : E.I) (Φ s : E.O i → PROP),
-    ⊢ H1.ihandle i Φ s -∗ H2.ihandle i Φ s
+    H1.ihandle i Φ s -∗ H2.ihandle i Φ s
 
 attribute [local ibubble 75%] WandH.is_wandH
 
@@ -128,8 +130,8 @@ instance {PROP E₁ E₂} [BI PROP]
     (H1 H1' : IHandler PROP E₁) (H2 H2' : IHandler PROP E₂)
     [Hwand1 : WandH H1 H1'] [Hwand2 : WandH H2 H2'] :
     WandH (H1 ⊕ₕ H2) (H1' ⊕ₕ H2') := by
-    constructor; intro e Φ s
-    cases e <;> ibubble
+  constructor; intro e Φ s
+  cases e <;> ibubble
 
 end handler_WandH
 
@@ -138,15 +140,15 @@ section handler_Sequential
 /-- `Sequential` handlers ignore the spawning continuation and do not model concurrency. -/
 class Sequential {PROP} [BI PROP] {E : Effect} (H : IHandler PROP E) where
   is_seq : ∀ (i : E.I) (Φ s : E.O i → PROP),
-    ⊢ H.ihandle i Φ s -∗ H.ihandle i Φ (fun _ => iprop(⌜False⌝))
+    H.ihandle i Φ s -∗ H.ihandle i Φ (fun _ => iprop% False)
 
 attribute [local ibubble 75%] Sequential.is_seq
 
 instance {PROP E₁ E₂} [BI PROP]
-  (H1 : IHandler PROP E₁) (H2 : IHandler PROP E₂)
-  [Hs1 : Sequential H1] [Hs2 : Sequential H2] : Sequential (H1 ⊕ₕ H2) := by
-    constructor; intro e Φ s
-    cases e <;> ibubble
+    (H1 : IHandler PROP E₁) (H2 : IHandler PROP E₂)
+    [Hs1 : Sequential H1] [Hs2 : Sequential H2] : Sequential (H1 ⊕ₕ H2) := by
+  constructor; intro e Φ s
+  cases e <;> ibubble
 
 end handler_Sequential
 
@@ -155,7 +157,8 @@ open ITree.Exec
 
 variable {PROP : Type _} [BI PROP] [BIFUpdate PROP]
 
-class EHandlerAdequate {E GE : Effect.{u} } {R σ : Type _}
+/-- Logical adequacy interface for executable handlers, with an invariant over the state and the pending thread pool. -/
+class EHandlerAdequate {E GE : Effect.{u}} {R σ : Type _}
     (H : IHandler PROP E) (EH : EHandler E GE R σ) where
   inv : σ → List (((ITree GE R → PROP) → PROP)) → PROP
   adequate :
@@ -163,7 +166,7 @@ class EHandlerAdequate {E GE : Effect.{u} } {R σ : Type _}
       (Ms : List (((ITree GE R → PROP) → PROP)))
       (C : ITree GE R → σ → Prop) (k : E.O i → ITree GE R),
       EH.handle i s k C →
-      H.ihandle i (λ a => G (k a)) (λ a => G (k a)) -∗
+      H.ihandle i (fun a => G (k a)) (fun a => G (k a)) -∗
       inv s Ms -∗
       |={∅}=> ∃ t' s' M' Ms' Msn, <affine> ⌜C t' s'⌝ ∗
         <affine> ⌜(M' :: Ms').Perm (Msn ++ Ms)⌝ ∗
@@ -171,26 +174,110 @@ class EHandlerAdequate {E GE : Effect.{u} } {R σ : Type _}
         (∀ P, M' P ={∅}=∗ P t')
 
 /-- Logical adequacy interface for simple executable handlers. -/
-class SEHandlerAdequate {E : Effect.{_} } {σ : Type _}
+class SEHandlerAdequate {E : Effect.{_}} {σ : Type _}
     (H : IHandler PROP E) (EH : SEHandler E σ) where
   inv : σ → PROP
   adequate :
     ∀ (i : E.I) (s : σ) (C : E.O i → σ → Prop) (Φ1 Φ2 : E.O i → PROP),
       EH.handle i s C →
-      H.ihandle i Φ1 Φ2 ⊢
+      H.ihandle i Φ1 Φ2 -∗
       inv s -∗
       |={∅}=> ∃ a s', <affine> ⌜C a s'⌝ ∗ inv s' ∗ Φ1 a
 
-instance {E GE : Effect.{u} } {R σ : Type _}
+instance EH_of_SEH_adequate {E GE : Effect.{u}} {R σ : Type _}
     (H : IHandler PROP E) (EH : SEHandler E σ)
     [A : SEHandlerAdequate H EH] :
     EHandlerAdequate H (EH : EHandler E GE R σ) where
-  inv s _ := A.inv s
+  inv s Ms := iprop% <affine> ⌜Ms = []⌝ ∗ A.inv s
   adequate := by
     intro G i s Ms C k H0; simp at H0
-    iintro Hh Hinv
+    iintro Hh ⟨%rfl, Hinv⟩
     ihave >⟨%a, %s', %_, Hinv, HG⟩ := A.adequate $$ Hh [$]; assumption
-    iexists (k a), s', (λ P => P (k a)), Ms, [λ P => P (k a)]
+    iexists (k a), s', (fun P => P (k a)), [], [fun P => P (k a)]
     ibubble pureBy simp [*]
 
+/-- Independent simple handlers preserve the separating conjunction of their invariants. -/
+instance sumSEH_adequate {E₁ E₂ : Effect.{u}} {S₁ S₂ : Type u}
+    (H₁ : IHandler PROP E₁) (H₂ : IHandler PROP E₂)
+    (EH₁ : SEHandler E₁ S₁) (EH₂ : SEHandler E₂ S₂)
+    [A₁ : SEHandlerAdequate H₁ EH₁] [A₂ : SEHandlerAdequate H₂ EH₂] :
+    SEHandlerAdequate (H₁ ⊕ₕ H₂) (EH₁ ⊕ₛₑₕ EH₂) where
+  inv s := iprop% A₁.inv s.1 ∗ A₂.inv s.2
+  adequate :=by
+    iintro %i %⟨s1, s2⟩ %C %Φ1 %Φ2 %Hse
+    cases i with
+    | inl i =>
+      simp only [sumH_inl, sumSEH] at ⊢ Hse
+      iintro Hh ⟨Hinv1, Hinv2⟩
+      ihave >⟨%a, %s', %HC, Hinv1, HΦ1⟩ := A₁.adequate $$ Hh [$]; assumption
+      imodintro; iexists a, (s', s2)
+      iframe Hinv1 Hinv2 HΦ1
+      itrivial
+    | inr i =>
+      simp only [sumH_inr, sumSEH] at ⊢ Hse
+      iintro Hh ⟨Hinv1, Hinv2⟩
+      ihave >⟨%a, %s', %HC, Hinv2, HΦ2⟩ := A₂.adequate $$ Hh [$]; assumption
+      imodintro; iexists a, (s1, s')
+      iframe Hinv1 Hinv2 HΦ2
+      itrivial
+
+/-- Two thread-pool handlers: the pending threads are split between their invariants. -/
+instance sumEEH_adequate {E₁ E₂ GE : Effect.{u}} {R S₁ S₂ : Type u}
+    (H₁ : IHandler PROP E₁) (H₂ : IHandler PROP E₂)
+    (EH₁ : EHandler E₁ GE R S₁) (EH₂ : EHandler E₂ GE R S₂)
+    [A₁ : EHandlerAdequate H₁ EH₁] [A₂ : EHandlerAdequate H₂ EH₂] :
+    EHandlerAdequate (H₁ ⊕ₕ H₂) (EH₁ ⊕ₑₕ EH₂) where
+  inv s Ms := iprop% ∃ Ms1 Ms2, <affine> ⌜Ms.Perm (Ms1 ++ Ms2)⌝ ∗ A₁.inv s.1 Ms1 ∗ A₂.inv s.2 Ms2
+  adequate := by
+    intro G i ⟨s1, s2⟩ Ms C k Heh
+    cases i with
+    | inl i =>
+      simp only [sumH_inl]; iintro Hh ⟨%Ms1, %Ms2, ⟨%Hsplit, Hinv1, Hinv2⟩⟩
+      ihave >⟨%t', %s', %M', %Ms₁', %Msn, HC, %Hperm, Hspawn, Hinv1, Hclose⟩ :=
+        A₁.adequate $$ Hh Hinv1; exact Heh
+      imodintro
+      iexists t', (s', s2), M', Ms₁' ++ Ms2, Msn
+      iframe; isplitl
+      · ipureintro
+        open List in
+        calc M' :: (Ms₁' ++ Ms2)
+        _ = (M' :: Ms₁') ++ Ms2 := rfl
+        _ ~ (Msn ++ Ms1) ++ Ms2 := Hperm.append_right Ms2
+        _ = Msn ++ (Ms1 ++ Ms2) := append_assoc _ _ _
+        _ ~ Msn ++ Ms := Hsplit.symm.append_left Msn
+      · itrivial
+    | inr i =>
+      simp only [sumH_inr]; iintro Hh ⟨%Ms1, %Ms2, ⟨%Hsplit, Hinv1, Hinv2⟩⟩
+      ihave >⟨%t', %s', %M', %Ms₂', %Msn, HC, %Hperm, Hspawn, Hinv2, Hclose⟩ :=
+        A₂.adequate $$ Hh Hinv2; exact Heh
+      imodintro
+      iexists t', (s1, s'), M', Ms1 ++ Ms₂', Msn
+      iframe; isplitl
+      · ipureintro
+        open List in
+        calc M' :: (Ms1 ++ Ms₂')
+        _ ~ Ms1 ++ (M' :: Ms₂') := perm_middle.symm
+        _ ~ Ms1 ++ (Msn ++ Ms2) := Hperm.append_left Ms1
+        _ ~ Msn ++ (Ms1 ++ Ms2) := perm_append_comm_assoc _ _ _
+        _ ~ Msn ++ Ms := Hsplit.symm.append_left Msn
+      · itrivial
+
+/-- Adequacy is preserved by an isomorphism of executable states. -/
+instance isoEH_adequate {E GE : Effect.{u}} {R S₁ S₂ : Type u}
+    (iso : Iso S₁ S₂) (H : IHandler PROP E) (EH : EHandler E GE R S₁)
+    [A : EHandlerAdequate H EH] : EHandlerAdequate H (isoEH iso EH) where
+  inv s Ms := A.inv (iso.invFun s) Ms
+  adequate := by
+    intro G i s Ms C k Heh
+    iintro Hh Hinv
+    ihave >⟨%t', %s', %M', %Ms', %Msn, HC, Hperm, HMsn, Hinv', Hpre⟩ :=
+      A.adequate $$ Hh Hinv; exact Heh
+    imodintro
+    iexists t', iso.toFun s', M', Ms', Msn
+    simp only [invFun_toFun]
+    iframe HC Hperm HMsn Hinv' Hpre
+
+
 end adequate
+
+end IrisITree
