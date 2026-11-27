@@ -43,19 +43,21 @@ declare_syntax_cat ibubbleErasedRule
 syntax ibubbleRuleDirection ppSpace ident : ibubbleErasedRule
 syntax ident : ibubbleErasedRule
 
-declare_syntax_cat ibubbleRuleEdit
-syntax "with" "[" ibubbleLocalRule,* "]" : ibubbleRuleEdit
-syntax "without" "[" ibubbleErasedRule,* "]" : ibubbleRuleEdit
+declare_syntax_cat ibubbleWithRules
+syntax "with" "[" ibubbleLocalRule,* "]" : ibubbleWithRules
+
+declare_syntax_cat ibubbleWithoutRules
+syntax "without" "[" ibubbleErasedRule,* "]" : ibubbleWithoutRules
 
 syntax (name := ibubbleTactic)  "ibubble"
   (ppSpace ibubbleStrategy)? (ppSpace ibubbleNormMode)?
   (ppSpace ibubblePureSolver)? (ppSpace ibubbleTheoremLimit)?
   (ppSpace ibubbleDepthLimit)?
-  (ppSpace ibubbleRuleEdit)* : tactic
+  (ppSpace ibubbleWithRules)? (ppSpace ibubbleWithoutRules)? : tactic
 syntax (name := ibubbleTactic?) "ibubble?"
   (ppSpace ibubbleStrategy)? (ppSpace ibubbleNormMode)?
   (ppSpace ibubblePureSolver)? (ppSpace ibubbleTheoremLimit)?
   (ppSpace ibubbleDepthLimit)?
-  (ppSpace ibubbleRuleEdit)* : tactic
+  (ppSpace ibubbleWithRules)? (ppSpace ibubbleWithoutRules)? : tactic
 
 end Bubble

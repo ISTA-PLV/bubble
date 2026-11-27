@@ -82,49 +82,66 @@ private def theoremRule (scope : RuleScope) (direction : RuleDirection)
   indexingMode
   successProb := probability
 
-/-- Lower a registered bi-entailment into two explicitly oriented backward rules. -/
-private def backwardTheoremRules (scope : RuleScope) (decl : Name)
-    (probability : Percent) : MetaM (Array Rule) := do
+/--
+  Lower a registered theorem into rules of the given direction. A backward
+  bi-entailment is split into two explicitly oriented rules; forward rules act on
+  hypotheses rather than the target, so they are left unindexed.
+-/
+private def theoremRules (scope : RuleScope) (direction : RuleDirection)
+    (decl : Name) (probability : Percent) : MetaM (Array Rule) := do
+  if direction == .forward then
+    return #[theoremRule scope direction decl probability]
   let info ← getConstInfo decl
   let (_, _, body) ← forallMetaTelescopeReducing info.type
   let body ← whnf body
   let some args := body.appM? ``BIBase.BiEntails
-    | return #[theoremRule scope .backward decl probability]
+    | return #[theoremRule scope direction decl probability]
   let some lhs := args[args.size - 2]? | return #[]
   let some rhs := args[args.size - 1]? | return #[]
   let mpMode ← IndexingMode.targetMatching rhs
   let mprMode ← IndexingMode.targetMatching lhs
   return #[
-    theoremRule scope .backward decl probability .mp mpMode,
-    theoremRule scope .backward decl probability .mpr mprMode
+    theoremRule scope direction decl probability .mp mpMode,
+    theoremRule scope direction decl probability .mpr mprMode
   ]
 
-def backwardIndex (localRules : Array LocalTheoremRule := #[]) :
-    MetaM Index := do
-  (← getIbubbleBackwardLemmas).foldlM (init := {}) λ index entry => do
-    if localRules.any λ rule => rule.direction == .backward && rule.decl == entry.decl then
-      return index
-    return (← backwardTheoremRules .global entry.decl entry.successProbability).foldl
-      (init := index) λ index rule => index.add rule rule.indexingMode
-
-def localTheoremIndex (rules : Array LocalTheoremRule) :
-    MetaM Index := do
+/--
+  Rules registered with `@[ibubble]`. A theorem mentioned by a local rule edit in
+  the same direction (`with` or `without`) is left out, so the local edit wins.
+-/
+private def globalIndex (localRules : Array LocalTheoremRule) : MetaM Index := do
+  let registered := [
+    (RuleDirection.backward, ← getIbubbleBackwardLemmas),
+    (RuleDirection.forward, ← getIbubbleForwardLemmas)
+  ]
   let mut index : Index := {}
-  for localRule in rules do
-    match localRule.action with
-    | .erase => pure ()
-    | .insert probability =>
-      if localRule.direction == .backward then
-        for rule in ← backwardTheoremRules .local localRule.decl probability do
-          index := index.add rule rule.indexingMode
-      else
-        let rule := theoremRule .local localRule.direction localRule.decl probability
+  for (direction, entries) in registered do
+    for entry in entries do
+      if localRules.any λ rule => rule.direction == direction && rule.decl == entry.decl then
+        continue
+      for rule in ← theoremRules .global direction entry.decl entry.successProbability do
         index := index.add rule rule.indexingMode
+  return index
+
+/--
+  Rules added for a single `ibubble` invocation with `with [...]`. `without [...]`
+  takes priority: a theorem erased in the same direction is not added.
+-/
+private def localIndex (localRules : Array LocalTheoremRule) : MetaM Index := do
+  let mut index : Index := {}
+  for localRule in localRules do
+    let .insert probability := localRule.action | continue
+    let erased := localRules.any λ rule =>
+      rule.action matches .erase &&
+        rule.direction == localRule.direction && rule.decl == localRule.decl
+    if erased then continue
+    for rule in ← theoremRules .local localRule.direction localRule.decl probability do
+      index := index.add rule rule.indexingMode
   return index
 
 /-- Return back all potential rules' set in `Bubble`. -/
 def buildIndex (config : SearchConfig) : MetaM Index := do
-  return tacticsIndex.merge (← backwardIndex config.localTheoremRules)
-    |>.merge (← localTheoremIndex config.localTheoremRules)
+  return tacticsIndex.merge (← globalIndex config.localTheoremRules)
+    |>.merge (← localIndex config.localTheoremRules)
 
 end Bubble

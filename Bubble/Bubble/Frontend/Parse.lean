@@ -111,20 +111,19 @@ private meta def parseErasedRule (stx : Syntax) : TermElabM LocalTheoremRule := 
       }
   | _ => throwUnsupportedSyntax
 
-private meta def parseRuleEdit (stx : Syntax) : TermElabM (Array LocalTheoremRule) := do
+private meta def parseWithRules (stx : TSyntax `ibubbleWithRules) :
+    TermElabM (Array LocalTheoremRule) := do
   match stx with
-  | `(ibubbleRuleEdit| with [$[$rules:ibubbleLocalRule],*]) =>
+  | `(ibubbleWithRules| with [$[$rules:ibubbleLocalRule],*]) =>
       rules.mapM parseLocalRule
-  | `(ibubbleRuleEdit| without [$[$rules:ibubbleErasedRule],*]) =>
-      rules.mapM parseErasedRule
   | _ => throwUnsupportedSyntax
 
-private meta def parseRuleEdits (edits : Array (TSyntax `ibubbleRuleEdit)) :
+private meta def parseWithoutRules (stx : TSyntax `ibubbleWithoutRules) :
     TermElabM (Array LocalTheoremRule) := do
-  let mut localTheoremRules := #[]
-  for edit in edits do
-    localTheoremRules := localTheoremRules ++ (← parseRuleEdit edit)
-  return localTheoremRules
+  match stx with
+  | `(ibubbleWithoutRules| without [$[$rules:ibubbleErasedRule],*]) =>
+      rules.mapM parseErasedRule
+  | _ => throwUnsupportedSyntax
 
 private meta def mkConfig (generateScript? : Bool)
     (strategyStx? : Option (TSyntax `ibubbleStrategy))
@@ -132,7 +131,8 @@ private meta def mkConfig (generateScript? : Bool)
     (pureSolverStx? : Option (TSyntax `ibubblePureSolver))
     (theoremLimitStx? : Option (TSyntax `ibubbleTheoremLimit))
     (depthLimitStx? : Option (TSyntax `ibubbleDepthLimit))
-    (ruleEdits : Array (TSyntax `ibubbleRuleEdit)) : TermElabM SearchConfig := do
+    (withRulesStx? : Option (TSyntax `ibubbleWithRules))
+    (withoutRulesStx? : Option (TSyntax `ibubbleWithoutRules)) : TermElabM SearchConfig := do
   let strategy ← match strategyStx? with
     | none => pure .bestFirst
     | some strategyStx => parseStrategy strategyStx
@@ -148,7 +148,13 @@ private meta def mkConfig (generateScript? : Bool)
   let depthLimit ← match depthLimitStx? with
     | none => pure ({} : SearchConfig).maxDepth
     | some depthLimitStx => parseDepthLimit depthLimitStx
-  let localTheoremRules ← parseRuleEdits ruleEdits
+  let withRules ← match withRulesStx? with
+    | none => pure #[]
+    | some withRulesStx => parseWithRules withRulesStx
+  let withoutRules ← match withoutRulesStx? with
+    | none => pure #[]
+    | some withoutRulesStx => parseWithoutRules withoutRulesStx
+  let localTheoremRules := withRules ++ withoutRules
   return {
     generateScript?
     strategy
@@ -168,14 +174,16 @@ meta def parse (stx : Syntax) : TermElabM SearchConfig := do
         $[$pureSolver:ibubblePureSolver]?
         $[$theoremLimit:ibubbleTheoremLimit]?
         $[$depthLimit:ibubbleDepthLimit]?
-        $[$ruleEdits:ibubbleRuleEdit]*) =>
-        mkConfig false strategy normMode pureSolver theoremLimit depthLimit ruleEdits
+        $[$withRules:ibubbleWithRules]? $[$withoutRules:ibubbleWithoutRules]?) =>
+        mkConfig false strategy normMode pureSolver theoremLimit depthLimit
+          withRules withoutRules
     | `(tactic| ibubble? $[$strategy:ibubbleStrategy]? $[$normMode:ibubbleNormMode]?
         $[$pureSolver:ibubblePureSolver]?
         $[$theoremLimit:ibubbleTheoremLimit]?
         $[$depthLimit:ibubbleDepthLimit]?
-        $[$ruleEdits:ibubbleRuleEdit]*) =>
-        mkConfig true strategy normMode pureSolver theoremLimit depthLimit ruleEdits
+        $[$withRules:ibubbleWithRules]? $[$withoutRules:ibubbleWithoutRules]?) =>
+        mkConfig true strategy normMode pureSolver theoremLimit depthLimit
+          withRules withoutRules
     | _ =>
         throwUnsupportedSyntax
 

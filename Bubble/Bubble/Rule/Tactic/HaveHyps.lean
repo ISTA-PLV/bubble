@@ -17,7 +17,7 @@ private structure Expansion where
   goals : Array SubGoal
   postState : Meta.SavedState
 
-private partial def parseHypothesis?
+partial def parseHypothesis?
     {u : Level} {prop : Q(Type u)} {bi : Q(Iris.BI $prop)}
     (persistent : Q(Bool)) (hyp : Q($prop)) :
     MetaM (Option (Array Q($prop) × Q($prop))) := do
@@ -71,7 +71,7 @@ private def usefulConclusion
   | .some _ => before.restore; return true
   | .none | .undef => before.restore; return false
 
-private def mkChildren (irisGoal : IrisGoal) (tag : Name) (depth : Nat)
+def mkChildren (irisGoal : IrisGoal) (tag : Name) (depth : Nat)
     {e' : Q($irisGoal.prop)} (hyps : Hyps irisGoal.bi e')
     (premises : Array Q($irisGoal.prop)) (conclusion : Q($irisGoal.prop)) :
     MetaM (Array SubGoal × Option IrisHyp) := do

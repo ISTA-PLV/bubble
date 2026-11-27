@@ -13,7 +13,6 @@ namespace Bubble.RuleBuilder
 def run : RuleBuilder → RuleRunner
   | .tactic descr => Bubble.Tactic.run descr
   | .backward _ => Bubble.Backward.run
-  -- TODO: Delegate to the forward rule runner once it is implemented.
-  | .forward _ => fun _ => return RuleOutput.ofSpecs #[]
+  | .forward _ => Bubble.Forward.run
 
 end Bubble.RuleBuilder

@@ -44,7 +44,18 @@ private def mkRuleApplicationTactic (rapp : Rapp)
       let premiseSplits := splits.extract 0 (splits.size - 1)
       let decl := mkIdent rapp.appliedRule.id.name.eraseMacroScopes
       mkIApply decl premiseSplits
-  | .forward _ => pure fallback
+  | .forward _ =>
+      match rapp.generatedSpatialHyps[0]? with
+      | some generated =>
+          let generated := mkIdent generated.name.eraseMacroScopes
+          let decl := mkIdent rapp.appliedRule.id.name.eraseMacroScopes
+          let premiseSplits := splits.extract 0 (splits.size - 1)
+          if premiseSplits.isEmpty then
+            `(tactic| ihave $generated:ident := $decl:term)
+          else
+            let patterns ← premiseSplits.mapM mkSpatialSpecPat
+            `(tactic| ihave $generated:ident := $decl:term $$ $patterns:specPat*)
+      | none => pure fallback
   | .tactic .ipureIntro =>
       if config.pureStop? then `(tactic| ipureintro)
       else
